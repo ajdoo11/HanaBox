@@ -1,0 +1,12 @@
+# Ein-Klick-Hosting auf Render.com (kostenlos, mit HTTPS – nötig für den Sprachchat auf dem Tablet)
+services:
+  - type: web
+    name: hanablox
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

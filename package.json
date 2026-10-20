@@ -1,0 +1,19 @@
+{
+  "name": "hanablox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Klötzchen-Spielwelt für Kinder – online mit Freunden spielen, ohne Waffen.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.0",
+    "simple-peer": "^9.11.1",
+    "three": "0.169.0",
+    "ws": "8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

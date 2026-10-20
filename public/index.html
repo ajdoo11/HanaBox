@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#7c4dff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HanaBlox">
+<title>HanaBlox</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.js", "three/addons/": "/vendor/addons/" } }</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<!-- Anmeldung -->
+<section id="authScreen" class="screen" hidden>
+  <div class="auth-box">
+    <div class="logo big">Hana<span>Blox</span></div>
+    <p class="auth-sub">Sicherer Spielspass für Kinder</p>
+
+    <div id="authLogin">
+      <h2>Eltern-Anmeldung</h2>
+      <label class="field">E-Mail <input id="authEmail" type="email" autocomplete="email"></label>
+      <label class="field">Passwort <input id="authPass" type="password" autocomplete="current-password"></label>
+      <p id="authError" class="error"></p>
+      <button id="btnLogin" class="btn primary big wide">Anmelden</button>
+      <button id="btnShowReg" class="btn big wide">Neues Konto erstellen</button>
+      <button id="btnSkipAuth" class="btn small">Ohne Anmeldung spielen</button>
+    </div>
+
+    <div id="authRegister" hidden>
+      <h2>Konto erstellen</h2>
+      <label class="field">E-Mail <input id="regEmail" type="email" autocomplete="email"></label>
+      <label class="field">Passwort (min. 6 Zeichen) <input id="regPass" type="password" minlength="6" autocomplete="new-password"></label>
+      <label class="field">Passwort wiederholen <input id="regPass2" type="password" autocomplete="new-password"></label>
+      <p id="regError" class="error"></p>
+      <button id="btnRegister" class="btn primary big wide">Registrieren</button>
+      <button id="btnShowLogin" class="btn big wide">Zurück zur Anmeldung</button>
+    </div>
+
+    <div id="authChildren" hidden>
+      <h2>Wer spielt heute?</h2>
+      <div id="childList" class="child-grid"></div>
+      <div class="add-child-row">
+        <input id="childNameInput" maxlength="14" placeholder="Neuer Spielername">
+        <button id="btnAddChild" class="btn primary">+ Hinzufügen</button>
+      </div>
+      <p id="childError" class="error"></p>
+      <button id="btnLogout" class="btn small">Abmelden</button>
+    </div>
+  </div>
+</section>
+
+<!-- Startbildschirm -->
+<section id="menu" class="screen">
+  <header class="topbar">
+    <div class="logo">Hana<span>Blox</span></div>
+    <div class="top-right">
+      <div class="star-chip" title="Deine Sterne">⭐ <b class="starCount">0</b></div>
+      <button id="btnQuestsHome" class="btn" title="Aufgaben">🏆</button>
+      <button id="btnAvatar" class="btn avatar-btn"><canvas id="miniAvatar" width="96" height="96"></canvas><span>Avatar &amp; Shop</span></button>
+    </div>
+  </header>
+  <div class="hello">Hallo <b id="helloName"></b>! Was möchtest du spielen?</div>
+  <div id="recentBox" hidden>
+    <h2 class="section">▶ Weiterspielen</h2>
+    <div id="recentRow" class="recent-row"></div>
+  </div>
+  <h2 class="section">🎮 Spiele</h2>
+  <div id="gameGrid" class="grid"></div>
+  <div class="join-box">
+    <span>🎟️ Code von Freunden:</span>
+    <input id="joinCode" maxlength="6" placeholder="ABCD" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <button id="btnJoin" class="btn primary">Beitreten</button>
+  </div>
+  <p id="menuError" class="error"></p>
+</section>
+
+<!-- Avatar-Editor -->
+<section id="avatarScreen" class="screen" hidden>
+  <header class="topbar">
+    <button id="btnAvatarBack" class="btn primary">✓ Fertig</button>
+    <div class="title">Avatar &amp; Shop</div>
+    <div class="top-right">
+      <div class="star-chip">⭐ <b class="starCount">0</b></div>
+      <button id="btnRandom" class="btn">🎲 Zufall</button>
+    </div>
+  </header>
+  <div class="avatar-layout">
+    <div class="preview"><canvas id="avatarCanvas"></canvas></div>
+    <div class="options">
+      <label class="field">Mein Name <input id="nameInput" maxlength="14" autocomplete="off"></label>
+      <div class="tabs" id="avatarTabs"></div>
+      <div id="avatarOptions" class="opt-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Dialoge -->
+<div id="dialog" class="overlay" hidden><div class="card" id="dialogCard"></div></div>
+<div id="loading" class="overlay" hidden><div class="card center"><div class="spinner"></div><p id="loadingText">Verbinde…</p></div></div>
+
+<!-- Im Spiel -->
+<section id="hud" hidden>
+  <div class="hud-top-left">
+    <button id="btnMenu" class="hbtn menu-btn" title="Menü">☰</button>
+    <button id="btnInvite" class="hbtn wide">👋 Einladen · <b id="roomCode"></b></button>
+    <button id="btnMap" class="hbtn wide" hidden>🗺️ Karte</button>
+    <span id="gameTitle" class="game-title"></span>
+  </div>
+  <div id="status" class="hud-status"></div>
+  <div id="scoreboard" class="scoreboard"></div>
+  <div id="chatLog" class="chatlog"></div>
+  <div id="notice" class="notice"></div>
+  <div id="joyBase" class="joy"><div id="joyKnob" class="knob"></div></div>
+  <div class="hud-right">
+    <button id="btnChat" class="hbtn round" title="Chat">💬</button>
+    <button id="btnEmote" class="hbtn round" title="Tanzen">💃</button>
+    <button id="btnJump" class="jump" title="Springen">⬆</button>
+  </div>
+  <div id="chatPanel" class="panel" hidden></div>
+  <div id="emotePanel" class="panel small" hidden></div>
+  <div id="buildBar" class="buildbar" hidden><div class="modes"></div><div class="palette"></div></div>
+  <div id="bigMsg" class="bigmsg" hidden></div>
+  <div id="actions" class="actions"></div>
+  <div id="mapPanel" class="panel map-panel" hidden></div>
+  <div id="itemMenu" class="panel item-menu" hidden></div>
+  <div id="avatarPanel" class="panel avatar-panel" hidden>
+    <h3></h3>
+    <div class="tabs"></div>
+    <div class="opt-grid"></div>
+    <button class="btn primary close">✓ Fertig</button>
+  </div>
+  <div id="gameMenu" class="overlay" hidden>
+    <div class="card game-menu">
+      <h2>☰ Menü</h2>
+      <div class="star-chip big">⭐ <b class="starCount">0</b> Sterne</div>
+      <button id="gmResume" class="btn primary big">▶ Weiterspielen</button>
+      <button id="gmReset" class="btn big">🔄 Figur zurücksetzen</button>
+      <button id="gmSound" class="btn big">🔊 Ton an</button>
+      <button id="gmQuests" class="btn big">🏆 Aufgaben & Abzeichen</button>
+      <button id="gmBots" class="btn big">🤖 Bot-Freunde: an</button>
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 12px">
+        <span style="font-size:14px">🤖 Anzahl:</span>
+        <input id="gmBotCount" type="range" min="0" max="20" value="6" style="flex:1">
+        <span id="gmBotCountLabel" style="font-size:14px;min-width:24px;text-align:center">6</span>
+      </div>
+      <button id="gmGrab" class="btn big">🤗 Hochheben erlauben: ja</button>
+      <button id="gmVoice" class="btn big">🔇 Sprachchat aus</button>
+      <button id="gmLeave" class="btn pink big">🚪 Spiel verlassen</button>
+    </div>
+  </div>
+</section>
+<div id="starToast" class="star-toast"></div>
+<div id="fade" class="fade"></div>
+<div id="questPanel" class="overlay" hidden><div class="card quest-card">
+  <h2>🏆 Aufgaben & Abzeichen</h2>
+  <h3>Heute</h3>
+  <div id="questList" class="quest-list"></div>
+  <h3>Abzeichen</h3>
+  <div id="badgeList" class="badge-list"></div>
+  <button id="questClose" class="btn primary big">Schliessen</button>
+</div></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

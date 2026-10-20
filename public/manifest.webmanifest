@@ -1,0 +1,13 @@
+{
+  "name": "HanaBlox",
+  "short_name": "HanaBlox",
+  "description": "Klötzchen-Spielwelt – online mit Freunden spielen.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#a18cff",
+  "theme_color": "#7c4dff",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
