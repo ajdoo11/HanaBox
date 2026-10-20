@@ -11,6 +11,26 @@ export class VoiceChat {
     this.localStream = null;
     this.isMuted = false;
     this.isEnabled = false;
+    // iPad/Safari spielt Ton manchmal erst nach einem Antippen ab: bei jeder Berührung nochmal versuchen
+    this.unlock = () => { for (const a of this.audios.values()) if (a.paused) a.play().catch(() => {}); };
+    addEventListener('pointerdown', this.unlock, true);
+  }
+
+  // 'mic' = man wird gehört, 'muted' = Mikro stumm, 'listen' = nur zuhören (Mikrofon nicht erlaubt), 'off'
+  get status() {
+    if (!this.isEnabled) return 'off';
+    if (!this.localStream) return 'listen';
+    return this.isMuted ? 'muted' : 'mic';
+  }
+
+  connectedCount() {
+    return [...this.peers.values()].filter(pc => pc.connectionState === 'connected').length;
+  }
+
+  // Mikrofon nachträglich erlauben: neu starten, damit alle Verbindungen das Mikrofon bekommen
+  async retryMic() {
+    this.stop();
+    return this.start();
   }
 
   // Startet den Sprachchat. Ohne Mikrofon (verweigert/fehlt) hört man die anderen trotzdem.
@@ -113,11 +133,15 @@ export class VoiceChat {
     pc.ontrack = e => {
       let audio = this.audios.get(peerId);
       if (!audio) {
-        audio = new Audio();
+        audio = document.createElement('audio');
         audio.autoplay = true;
+        audio.playsInline = true;
+        audio.setAttribute('playsinline', '');
+        document.body.append(audio);
         this.audios.set(peerId, audio);
       }
       audio.srcObject = e.streams[0] || new MediaStream([e.track]);
+      audio.play().catch(() => this.game.notice('🔈 Tippe kurz auf den Bildschirm, damit du die anderen hörst', 4000));
     };
 
     pc.onconnectionstatechange = () => {

@@ -306,10 +306,11 @@ function startGame(welcome, myNet) {
   // Sprachchat startet automatisch, sobald man online in der Welt ist
   if (!localMode) {
     const g = game;
+    $('btnVoice').hidden = false;
     g.voice.start().then(mic => {
       if (game !== g) return;
-      $('gmVoice').textContent = mic ? '🎤 Sprachchat ein' : '🔈 Nur zuhören (kein Mikrofon)';
-      g.notice(mic ? '🎤 Sprachchat ist an – alle hören dich!' : '🔈 Du hörst die anderen. Mikrofon im Browser erlauben, um zu sprechen.', 3500);
+      updateVoiceBtn();
+      g.notice(mic ? '🎤 Sprachchat ist an – alle hören dich!' : '🔈 Du hörst die anderen. Tippe auf «Mikro erlauben», um zu sprechen.', 4000);
     });
   }
 }
@@ -365,6 +366,28 @@ $('gmBots').onclick = () => { botsOn = !botsOn; net?.send({ t: 'bots', on: botsO
 $('gmBotCount').oninput = () => { $('gmBotCountLabel').textContent = $('gmBotCount').value; };
 $('gmBotCount').onchange = () => { const c = Number($('gmBotCount').value); localStorage.setItem('hana_botCount', c); net?.send({ t: 'bots', on: botsOn, count: c }); };
 $('gmGrab').onclick = () => { saveGrab(profile.grab === false); net?.send({ t: 'pref', grab: profile.grab !== false }); updateSoundBtn(); };
+// Mikrofon-Knopf im Spiel: zeigt immer, ob man gehört wird
+const VOICE_LABEL = { mic: '🎤 Mikro an', muted: '🔇 Mikro aus', listen: '🔈 Mikro erlauben', off: '🔇 Sprachchat aus' };
+function updateVoiceBtn() {
+  if (!game) return;
+  const st = game.voice.status, n = game.voice.connectedCount();
+  const b = $('btnVoice');
+  b.className = 'hbtn wide voice-btn ' + st;
+  b.textContent = VOICE_LABEL[st] + (st !== 'off' && n ? ` · 👥 ${n}` : '');
+  $('gmVoice').textContent = VOICE_LABEL[st];
+}
+setInterval(updateVoiceBtn, 1500);
+$('btnVoice').onclick = async () => {
+  if (!game) return;
+  const v = game.voice;
+  if (v.status === 'mic') { v.setMuted(true); game.notice('🔇 Mikro aus – die anderen hören dich nicht'); }
+  else if (v.status === 'muted') { v.setMuted(false); game.notice('🎤 Mikro an – alle hören dich'); }
+  else {
+    const mic = await (v.status === 'off' ? v.start() : v.retryMic());
+    if (!mic) game.notice('🎤 Das Mikrofon ist gesperrt. iPad: Einstellungen → Safari → Mikrofon → Erlauben. Windows/Chrome: Schloss links neben der Adresse → Mikrofon → Zulassen.', 8000);
+  }
+  updateVoiceBtn();
+};
 $('gmVoice').onclick = async () => {
   if (!game) return;
   if (game.voice.isEnabled) {
@@ -373,8 +396,8 @@ $('gmVoice').onclick = async () => {
   } else if (localMode) {
     game.notice('🎤 Sprachchat braucht den Online-Server (siehe Anleitung)', 3500);
   } else {
-    const ok = await game.voice.start();
-    $('gmVoice').textContent = ok ? '🎤 Sprachchat ein' : '🔇 Sprachchat nicht verfügbar';
+    await game.voice.start();
+    updateVoiceBtn();
   }
 };
 

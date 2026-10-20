@@ -2190,6 +2190,8 @@ export class Game {
   destroy() {
     this.running = false;
     cancelAnimationFrame(this.raf);
+    this.voice.stop();
+    removeEventListener('pointerdown', this.voice.unlock, true);
     window.removeEventListener('resize', this.onResize);
     clearTimeout(this.noticeTimer);
     clearTimeout(this.bigTimer);
