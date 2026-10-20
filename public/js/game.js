@@ -4,7 +4,7 @@ import { WORLDS } from './worlds.js';
 import { GAMES, BLOCK_TYPES, ANIMS, ITEM_TYPES, ITEM_INDEX, VEHICLES, PETS, chatText, vehCode, vehDecode } from './shared.js';
 import { Physics, Body, makeBox, makeRamp, PLAYER, SEA } from './physics.js';
 import { Character } from './avatar.js';
-import { BuildWorld } from './build.js';
+import { BuildWorld, blockIcon } from './build.js';
 import { makeItemMesh } from './items.js';
 import { makeVehicle, spinWheels, SEATS } from './vehicles.js';
 import { buildStatic, partGeometry, makeMaterial, signMesh, ringMesh, ringMaterial, skyDome } from './geo.js';
@@ -532,9 +532,8 @@ export class Game {
       BLOCK_TYPES.forEach((t, k) => {
         const b = document.createElement('button');
         b.className = 'swatch' + (k === this.buildType ? ' on' : '');
-        b.style.background = t.color;
+        b.style.background = `${t.color} url(${blockIcon(t)}) center / cover`;
         b.title = t.name;
-        if (t.kind) b.textContent = { glass: '🪟', glow: '💡', bounce: '⤴️', lava: '🔥' }[t.kind];
         b.onclick = () => {
           this.buildType = k;
           pal.querySelectorAll('.swatch').forEach(x => x.classList.toggle('on', x === b));
@@ -2156,25 +2155,28 @@ export class Game {
   };
 
   // Passt die Bildauflösung automatisch an, damit das Spiel flüssig bleibt.
+  // Leistung anpassen, ohne dass das Bild unscharf wird: die Auflösung bleibt immer gleich,
+  // bei langsamen Geräten werden nacheinander Schatten seltener/aus und die Sichtweite kürzer.
   adaptQuality(rawDt) {
-    const q = this.quality || (this.quality = { avg: 1 / 60, t: 0, frame: 0, ratio: this.renderer.getPixelRatio() });
+    const q = this.quality || (this.quality = { avg: 1 / 60, t: 0, frame: 0, level: 0 });
     q.avg += (rawDt - q.avg) * 0.05;
     q.t += rawDt;
     q.frame++;
-    this.renderer.shadowMap.needsUpdate = q.frame % 2 === 0;
-    if (q.t < 1.5) return;
+    const every = q.level >= 1 ? 4 : 2;
+    this.renderer.shadowMap.needsUpdate = this.sun.castShadow && q.frame % every === 0;
+    if (q.t < 2) return;
     q.t = 0;
-    const max = Math.min(window.devicePixelRatio || 1, 1.5);
-    let r = q.ratio;
-    if (q.avg > 1 / 40) r = Math.max(0.55, r - 0.15);
-    else if (q.avg < 1 / 55) r = Math.min(max, r + 0.1);
-    if (Math.abs(r - q.ratio) > 0.01) {
-      q.ratio = r;
-      this.renderer.setPixelRatio(r);
-      this.onResize();
-    }
-    // Bei sehr langsamen Geräten Schatten ausschalten
-    if (q.avg > 1 / 22 && r <= 0.56 && this.sun.castShadow) { this.sun.castShadow = false; this.renderer.shadowMap.needsUpdate = true; }
+    let level = q.level;
+    if (q.avg > 1 / 38) level = Math.min(3, level + 1);
+    else if (q.avg < 1 / 56) level = Math.max(0, level - 1);
+    if (level === q.level) return;
+    q.level = level;
+    const shadows = level < 2;
+    if (this.sun.castShadow !== shadows) { this.sun.castShadow = shadows; this.renderer.shadowMap.needsUpdate = true; }
+    const far = level >= 3 ? 260 : 420;
+    if (this.scene.fog) { this.scene.fog.far = far; this.scene.fog.near = far * 0.3; }
+    this.camera.far = far + 40;
+    this.camera.updateProjectionMatrix();
   }
 
   onResize = () => {

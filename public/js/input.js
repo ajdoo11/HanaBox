@@ -39,14 +39,16 @@ export class Input {
 
   down = e => {
     if (!this.enabled) return;
-    if (e.pointerType !== 'mouse' && e.clientX < innerWidth * 0.4 && !this.joy) {
-      this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY };
-      const half = this.joyBase.offsetWidth / 2;
-      this.joyBase.style.left = e.clientX - half + 'px';
-      this.joyBase.style.top = e.clientY - half + 'px';
-      this.joyBase.style.bottom = 'auto';
-      this.joyBase.classList.add('active');
-      return;
+    // Der Joystick steht fest unten links; nur wer ihn (oder knapp daneben) berührt, steuert damit
+    if (e.pointerType !== 'mouse' && !this.joy) {
+      const r = this.joyBase.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (Math.hypot(e.clientX - cx, e.clientY - cy) < r.width * 0.75) {
+        this.joy = { id: e.pointerId, ox: cx, oy: cy };
+        this.joyBase.classList.add('active');
+        this.move(e);
+        return;
+      }
     }
     this.cams.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false });
     if (this.cams.size === 2) this.pinch = this.pinchDist();
@@ -88,7 +90,6 @@ export class Input {
       this.joy = null;
       this.joyVec = { x: 0, y: 0 };
       this.joyKnob.style.transform = '';
-      this.joyBase.style.left = ''; this.joyBase.style.top = ''; this.joyBase.style.bottom = '';
       this.joyBase.classList.remove('active');
       return;
     }

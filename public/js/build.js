@@ -17,6 +17,46 @@ export function blockMaterial(t) {
   return new THREE.MeshLambertMaterial(opts);
 }
 
+// Vorschaubild eines Klotzes für die Bau-Leiste (echtes Muster statt nur Farbe)
+const icons = new Map();
+export function blockIcon(t) {
+  if (icons.has(t.name)) return icons.get(t.name);
+  const S = 64, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.fillStyle = t.color; g.fillRect(0, 0, S, S);
+  const tex = getTexture(t.tex);
+  if (tex) { g.globalCompositeOperation = 'multiply'; g.drawImage(tex.image, 0, 0, S, S); g.globalCompositeOperation = 'source-over'; }
+  if (t.kind === 'door') {
+    g.fillStyle = '#ffd54f'; g.strokeStyle = '#5d4037'; g.lineWidth = 2;
+    g.beginPath(); g.arc(48, 34, 5, 0, Math.PI * 2); g.fill(); g.stroke();
+  }
+  if (t.name === 'Wasser') {
+    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 4;
+    for (const y of [18, 34, 50]) { g.beginPath(); for (let x = 0; x <= S; x += 4) g.lineTo(x, y + Math.sin(x / 6) * 4); g.stroke(); }
+  } else if (t.kind === 'glass') {
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, 0, S, S);
+    g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 6;
+    g.beginPath(); g.moveTo(10, 30); g.lineTo(30, 10); g.moveTo(18, 46); g.lineTo(46, 18); g.stroke();
+    g.strokeStyle = 'rgba(2,136,209,0.6)'; g.lineWidth = 4; g.strokeRect(2, 2, S - 4, S - 4);
+  } else if (t.kind === 'glow') {
+    const r = g.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S / 2);
+    r.addColorStop(0, '#ffffff'); r.addColorStop(0.5, '#fff176'); r.addColorStop(1, '#ffb300');
+    g.fillStyle = r; g.fillRect(0, 0, S, S);
+  } else if (t.kind === 'lava') {
+    g.fillStyle = '#ffeb3b';
+    for (const [x, y, rr] of [[16, 18, 7], [44, 26, 9], [24, 46, 8], [50, 52, 5]]) { g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill(); }
+  } else if (t.kind === 'bounce') {
+    g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.beginPath();
+    for (let i = 0; i <= 6; i++) g.lineTo(i % 2 ? 44 : 20, 52 - i * 7);
+    g.stroke();
+    g.fillStyle = '#ffffff'; g.fillRect(12, 52, 40, 6); g.fillRect(12, 6, 40, 6);
+  }
+  const url = c.toDataURL();
+  icons.set(t.name, url);
+  return url;
+}
+
 export class BuildWorld {
   constructor(scene, phys, allowed = BuildWorld.defaultAllowed) {
     this.scene = scene;

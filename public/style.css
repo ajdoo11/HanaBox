@@ -111,7 +111,7 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
   --sb: max(var(--edge), env(safe-area-inset-bottom));
   --st: max(calc(var(--u) * 1.2), env(safe-area-inset-top));
   --right-w: calc(var(--round) + var(--gap) + var(--jump));
-  --bar-h: calc(var(--u) * 12);
+  --bar-h: calc(var(--u) * 13 + 16px);
   /* Höhe der unteren Bedienung: Chat+Tanzen übereinander bzw. Joystick */
   --ctrl-h: max(var(--jump), calc(var(--round) * 2 + var(--gap)), var(--joy));
   --bl: calc(var(--sl) + var(--joy) + var(--u) * 2.5);
@@ -201,7 +201,7 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .buildbar .mode { background: var(--soft); border-radius: calc(var(--u) * 1.2); padding: calc(var(--u) * 0.8) calc(var(--u) * 1.2); font-weight: 800; font-size: calc(var(--u) * 1.5); white-space: nowrap; }
 .buildbar .mode.on { background: var(--purple); color: #fff; }
 .buildbar .palette { display: flex; gap: calc(var(--u) * 0.6); overflow-x: auto; touch-action: pan-x; padding: 2px; max-width: 100%; }
-.buildbar .swatch { flex: none; width: calc(var(--u) * 4.4); height: calc(var(--u) * 4.4); border-radius: var(--u); border: 3px solid #fff; box-shadow: 0 0 0 1px #ccc; font-size: 18px; }
+.buildbar .swatch { flex: none; width: calc(var(--u) * 5.4); height: calc(var(--u) * 5.4); border-radius: var(--u); border: 3px solid #fff; box-shadow: 0 0 0 1px #ccc; font-size: 18px; }
 .buildbar .swatch.on { box-shadow: 0 0 0 3px var(--purple); }
 .bigmsg {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 26px; padding: 22px 30px;
