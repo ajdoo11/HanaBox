@@ -57,6 +57,9 @@ Windows fragt beim ersten Start eventuell nach der Firewall. Dort «Private Netz
 - **Bot-Freunde:** Die Anzahl im ☰ Menü gilt für jede Welt und bleibt gespeichert.
 - **Skiberg:** Treppe und breite Schneerampen führen bis zum Gipfel.
 
+## Sofort spielen über GitHub
+**https://ajdoo11.github.io/HanaBox/** auf dem Tablet öffnen → Teilen → «Zum Home-Bildschirm». Das Spiel läuft dann ganz im Browser des Tablets: alle Welten, Bot-Freunde, Bauen, Läden und Jobs. Spielstände bleiben auf dem Tablet gespeichert. Freunde einladen und Sprachchat gehen erst mit dem Online-Server (unten).
+
 ## Online spielen (Tablet überall, mit Sprachchat)
 Der Sprachchat funktioniert im Browser nur über eine sichere Adresse (**https**). Im WLAN zu Hause (`http://192.168…`) geht das Spielen, aber nicht der Sprachchat. So kommt das Spiel ins Internet:
 
@@ -64,6 +67,7 @@ Der Sprachchat funktioniert im Browser nur über eine sichere Adresse (**https**
 2. Auf **https://render.com** mit dem GitHub-Konto anmelden → **New** → **Blueprint** → dieses GitHub-Projekt wählen → **Apply**. Die Datei `render.yaml` stellt alles automatisch ein (kostenloser Plan).
 3. Nach ein paar Minuten zeigt Render eine Adresse wie `https://hanablox-xxxx.onrender.com`. Diese auf dem Tablet öffnen → Teilen → «Zum Home-Bildschirm».
 4. Im Spiel: ☰ Menü → 🎤 Sprachchat einschalten und das Mikrofon erlauben.
+5. Damit auch der GitHub-Link den Server benutzt: in `public/js/config.js` bei `SERVER_URL` die Adresse eintragen, z.B. `'wss://hanablox-xxxx.onrender.com/ws'`.
 
 Hinweise zum kostenlosen Plan: Nach 15 Minuten ohne Spieler schläft der Server ein; der erste Aufruf danach dauert etwa eine Minute. Gebaute Klötze werden bei einem Neustart des Servers zurückgesetzt.
 

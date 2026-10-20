@@ -8,6 +8,12 @@ import { unlockAudio, sfx, setMuted } from './sfx.js';
 import { profile, saveName, saveAvatar, saveMuted, saveGrab, addRecent, removeRecent } from './profile.js';
 import { avatarEditor, ALL_TABS } from './editor.js';
 import * as Auth from './auth.js';
+import { SERVER_URL } from './config.js';
+import { LocalSocket } from './localserver.js';
+
+// Ohne eigenen Node-Server (GitHub Pages) läuft der Spiel-Server im Browser
+const STATIC_HOST = location.hostname.endsWith('github.io') || location.protocol === 'file:' || new URLSearchParams(location.search).has('offline');
+let localMode = STATIC_HOST && !SERVER_URL;
 
 const $ = id => document.getElementById(id);
 setMuted(profile.muted);
@@ -229,7 +235,7 @@ function connect(opts) {
   $('menuError').textContent = '';
   loading('Verbinde…');
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  const ws = localMode ? new LocalSocket() : new WebSocket(SERVER_URL || `${proto}://${location.host}/ws`);
   let welcomed = false;
   const myNet = { ws, send(m) { if (ws.readyState === 1) ws.send(JSON.stringify(m)); } };
   net = myNet;
@@ -260,6 +266,8 @@ function connect(opts) {
     if (net !== myNet) return;
     loading(null);
     if (!welcomed) {
+      // Online-Server nicht erreichbar: auf GitHub Pages trotzdem spielen (im Browser)
+      if (STATIC_HOST && !localMode && !$('menuError').textContent) { localMode = true; connect(opts); return; }
       if (!$('menuError').textContent) $('menuError').textContent = 'Keine Verbindung zum Server. Läuft der Server?';
       return;
     }
@@ -341,6 +349,8 @@ $('gmVoice').onclick = async () => {
   if (game.voice.isEnabled) {
     game.voice.stop();
     $('gmVoice').textContent = '🔇 Sprachchat aus';
+  } else if (localMode) {
+    game.notice('🎤 Sprachchat braucht den Online-Server (siehe Anleitung)', 3500);
   } else {
     const ok = await game.voice.start();
     $('gmVoice').textContent = ok ? '🎤 Sprachchat ein' : '🔇 Sprachchat nicht verfügbar';
@@ -502,7 +512,7 @@ $('btnLogout').onclick = async () => {
 
 // ---------- Start ----------
 async function boot() {
-  if (Auth.isConfigured()) {
+  if (Auth.isConfigured() && !STATIC_HOST) {
     $('authScreen').hidden = false;
     $('menu').hidden = true;
     const user = await Auth.init();

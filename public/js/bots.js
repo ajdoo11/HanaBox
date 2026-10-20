@@ -1,9 +1,9 @@
 // Bot-Freunde: laufen herum, grüssen, kommen mit, spielen Fangis und Münzjagd mit.
 // Sie benutzen dieselbe Physik wie die Spieler (Treppen, Leitern, Springen).
-import { Physics, Body, makeBox, makeRamp } from '../public/js/physics.js';
-import { WORLDS } from '../public/js/worlds.js';
-import { AVATAR_OPTIONS, DEFAULT_AVATAR, BOT_NAMES, JOBS, vehCode, ANIMS } from '../public/js/shared.js';
-import { LAND_DEFS } from '../public/js/lands.js';
+import { Physics, Body, makeBox, makeRamp } from './physics.js';
+import { WORLDS } from './worlds.js';
+import { AVATAR_OPTIONS, DEFAULT_AVATAR, BOT_NAMES, JOBS, vehCode, ANIMS } from './shared.js';
+import { LAND_DEFS } from './lands.js';
 
 const physCache = new Map();
 export function worldPhysics(game) {
