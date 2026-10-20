@@ -547,6 +547,14 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
         p.voiceReady = false;
         room.broadcast({ t: 'voice:leave', id: p.id }, p);
         break;
+      case 'fireworks': {
+        const x = num(m.x, -3200, 3200), z = num(m.z, -3200, 3200);
+        if (Math.hypot(x - p.state[0], z - p.state[2]) > 14) return;
+        if (now - (room.lastFireworks || 0) < 7000) return send(client.ws, { t: 'notice', text: '🎆 Das Feuerwerk lädt gleich wieder nach …' });
+        room.lastFireworks = now;
+        room.broadcast({ t: 'fireworks', x, z, by: p.name });
+        break;
+      }
       case 'tag': {
         if (room.game !== 'tag' || room.it !== p.id || !room.round || room.round.pause || room.round.waiting) return;
         if (now - room.itSince < 1800) return;

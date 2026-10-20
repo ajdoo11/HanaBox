@@ -187,6 +187,14 @@ export function pier(K, x, z, dir = 1, len = 70) {
   K.zoneAct(x + dir * (len - 4), 0, z, 3.6, 3.6, 'job', { title: '🎣 Fischen gehen', job: { emoji: '🎣', msg: 'Du angelst Fische!', stars: 5, time: 5 } });
 }
 
+// Grosser roter Knopf: startet ein Feuerwerk, das alle in der Nähe sehen
+export function fireworksButton(K, x, z) {
+  K.box(x, 0, z, 1.8, 1.1, 1.8, '#e53935', { act: 'fireworks', title: '🎆 Feuerwerk starten', shape: 'cyl', emissive: '#ff1744', emissiveIntensity: 0.35 });
+  K.deco(x, 1.1, z, 1.2, 0.35, 1.2, '#ff5252', { shape: 'cyl', emissive: '#ff1744', emissiveIntensity: 0.6 });
+  K.deco(x - 1.4, 0, z, 0.15, 3, 0.15, '#795548');
+  K.sign('🎆 Feuerwerk', x - 1.4, 3.2, z, 2.8, 0.8, 'z+', '#ffffff', '#d32f2f');
+}
+
 // Häuschen-Dorf mit Pilzdächern (Zauberwald)
 export function mushroomHouses(K, x0, z, dx, names, door = 's') {
   names.forEach((n, i) => {

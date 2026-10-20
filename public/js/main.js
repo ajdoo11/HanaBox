@@ -303,6 +303,7 @@ function startGame(welcome, myNet) {
   input.reset();
   game = new Game({ renderer, input, net: myNet, welcome, name: profile.name, avatar: profile.avatar, onLeave: leave });
   window.hbGame = game; // zum Testen in der Browser-Konsole
+  game.onPhoto = showPhoto;
   // Sprachchat startet automatisch, sobald man online in der Welt ist
   if (!localMode) {
     const g = game;
@@ -366,6 +367,22 @@ $('gmBots').onclick = () => { botsOn = !botsOn; net?.send({ t: 'bots', on: botsO
 $('gmBotCount').oninput = () => { $('gmBotCountLabel').textContent = $('gmBotCount').value; };
 $('gmBotCount').onchange = () => { const c = Number($('gmBotCount').value); localStorage.setItem('hana_botCount', c); net?.send({ t: 'bots', on: botsOn, count: c }); };
 $('gmGrab').onclick = () => { saveGrab(profile.grab === false); net?.send({ t: 'pref', grab: profile.grab !== false }); updateSoundBtn(); };
+// Selfie: Vorschau mit Speichern (iPad/iPhone: «Bild sichern» landet in den Fotos)
+$('btnPhoto').onclick = () => game?.takePhoto();
+function showPhoto(blob, url) {
+  const file = new File([blob], `HanaBlox-${new Date().toISOString().slice(0, 10)}.jpg`, { type: 'image/jpeg' });
+  dialog((card, close) => {
+    const save = async () => {
+      if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Mein HanaBlox-Foto' }); } catch { /* abgebrochen */ } }
+      else { const a = el('a', { href: URL.createObjectURL(blob), download: file.name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+    };
+    card.append(el('h2', { textContent: '📸 Cheese!' }), el('img', { className: 'photo-img', src: url, alt: 'Selfie' }),
+      el('div', { className: 'row' },
+        el('button', { className: 'btn primary', textContent: '💾 Speichern / Teilen', onclick: save }),
+        el('button', { className: 'btn', textContent: 'Schliessen', onclick: close })));
+  });
+}
+
 // Mikrofon-Knopf im Spiel: zeigt immer, ob man gehört wird
 const VOICE_LABEL = { mic: '🎤 Mikro an', muted: '🔇 Mikro aus', listen: '🔈 Mikro erlauben', off: '🔇 Sprachchat aus' };
 function updateVoiceBtn() {

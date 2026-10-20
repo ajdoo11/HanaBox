@@ -2,7 +2,7 @@
 // die man betreten kann (jedes Haus hat eine eigene Innenwelt).
 import { P, RAINBOW, PASTEL, FACE, DIR, rng, createKit } from './kit.js';
 import { addLands, LAND_DEFS } from './lands.js';
-import { shopRow, pool, funPark, zoo, sportsField, camp, slideTower } from './places.js';
+import { shopRow, pool, funPark, zoo, sportsField, camp, slideTower, fireworksButton } from './places.js';
 
 export const ROADS = [-210, -90, -30, 30, 90, 210];
 const RING = 210;
@@ -81,6 +81,7 @@ export function makeTown() {
     for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) add(P(cx - 5 + i * 2, 1.1, cz - 17 + j * 2, 1.96, 0.2, 1.96, RAINBOW[(i + j) % 7], { k: 'dance' }));
     for (const s of [-1, 1]) { box(cx + s * 7.2, 1, cz - 18.3, 1.4, 2.6, 1.2, '#212121'); deco(cx + s * 7.2, 2.6, cz - 17.65, 0.9, 0.9, 0.05, '#616161', { shape: 'cyl', rx: Math.PI / 2 }); }
     sign('Bühne 🎤', cx, 4.6, cz - 18.8, 6, 1.3, 'z+', '#fff59d', '#6a1b9a');
+    fireworksButton(K, cx - 13, cz - 9);
     deco(cx, 0, cz - 18.8, 0.3, 3.8, 0.3, '#455a64');
     // Glace-Stand
     box(cx + 15, 0, cz + 15, 3.4, 1.4, 1.8, '#f8bbd0', { act: 'menu', title: '🍦 Glace-Stand', menu: ['icecream', 'juice', 'strawberry', 'donut'] });

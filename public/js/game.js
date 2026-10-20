@@ -24,7 +24,7 @@ const ACT_LABELS = {
   dchair: '🦷 Auf den Zahnarztstuhl', dentist: '🦷 Zähne behandeln', register: '🛒 Bezahlen (Piep!)',
   job: '💼 Arbeiten',
 };
-const RING_ACTS = new Set(['menu', 'wardrobe', 'salon', 'dentist', 'dchair', 'treasure', 'vehicle', 'brush', 'register', 'swing', 'shower', 'travel', 'button', 'adopt', 'job']);
+const RING_ACTS = new Set(['fireworks', 'menu', 'wardrobe', 'salon', 'dentist', 'dchair', 'treasure', 'vehicle', 'brush', 'register', 'swing', 'shower', 'travel', 'button', 'adopt', 'job']);
 
 const JOB_TASKS = [
   { name: 'Bäckerei', emoji: '🥐', msg: 'Du backst Brötchen!', stars: 5, time: 4 },
@@ -97,6 +97,7 @@ export class Game {
     this.actParts = [];
     this.rings = [];
     this.parked = [];
+    this.rockets = [];
     this.pose = null;
     this.held = null;
     this.voice = new VoiceChat(this);
@@ -150,6 +151,7 @@ export class Game {
     this.sky.material.uniforms.top.value.copy(top);
     this.sky.material.uniforms.bottom.value.copy(horizon);
     this.scene.fog.color.copy(horizon);
+    this.scene.background = horizon;
   }
 
   updateLand() {
@@ -246,6 +248,8 @@ export class Game {
     this.scene.add(this.sky);
     this.disposables.push(this.sky.geometry, this.sky.material);
     this.scene.fog = new THREE.Fog(horizon, 120, 420);
+    // Falls der Himmel einmal nicht gezeichnet wird: hell statt schwarz
+    this.scene.background = horizon.clone();
     this.makeSnow();
     this.scene.add(new THREE.HemisphereLight('#ffffff', '#8aa07a', 1.15));
     const sun = new THREE.DirectionalLight('#fff4dc', 1.9);
@@ -802,6 +806,7 @@ export class Game {
       }
       case 'carry': this.onCarry(m.by, m.id); break;
       case 'thrown': this.onThrown(m); break;
+      case 'fireworks': this.startFireworks(m.x, m.z, m.by); break;
       case 'treated':
         if (m.id === this.myId) {
           this.notice(`✨ ${this.nameOf(m.by)} hat deine Zähne geputzt! Strahlend sauber!`, 3500);
@@ -1206,6 +1211,7 @@ export class Game {
       case 'tv': case 'lamp': this.net.send({ t: 'toggle', key: a.part.key }); break;
       case 'vehicle': this.enterVehicle(a.part.veh, a.part.vcolor, a.part); break;
       case 'treasure': this.openTreasure(a.part); break;
+      case 'fireworks': this.net.send({ t: 'fireworks', x: a.part.x, z: a.part.z }); break;
       case 'brush':
         openTeethGame({ title: '🪥 Zähne putzen', onDone: ok => { if (ok) { addStars(3); this.notice('✨ Strahlende Zähne! +3 ⭐'); this.char.say('😁✨'); } } });
         break;
@@ -1662,6 +1668,86 @@ export class Game {
     }
   }
 
+  // ---------- Feuerwerk ----------
+  startFireworks(x, z, by) {
+    const p = this.body.p;
+    if (Math.hypot(x - p.x, z - p.z) > 320) return;
+    this.notice(`🎆 ${by} zündet ein Feuerwerk!`, 2500);
+    for (let i = 0; i < 12; i++) setTimeout(() => this.launchRocket(x + (Math.random() - 0.5) * 18, z + (Math.random() - 0.5) * 18), i * 380 + Math.random() * 200);
+  }
+
+  launchRocket(x, z) {
+    if (!this.running) return;
+    const geo = this.rocketGeo || (this.rocketGeo = new THREE.SphereGeometry(0.28, 8, 6));
+    if (!this.disposables.includes(geo)) this.disposables.push(geo);
+    const sets = [['#ff1744', '#ff8a80', '#ffffff'], ['#ffea00', '#ff9100'], ['#00e5ff', '#2979ff', '#ffffff'], ['#76ff03', '#ffff00'], ['#d500f9', '#ff4081', '#ffffff'], ['#ff9100', '#ffd180']];
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#fff8e1' }));
+    m.position.set(x, 1.2, z);
+    this.scene.add(m);
+    this.rockets.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 3, 17 + Math.random() * 5, (Math.random() - 0.5) * 3), colors: sets[Math.floor(Math.random() * sets.length)] });
+    sfx('whoosh');
+  }
+
+  updateRockets(dt) {
+    for (let i = this.rockets.length - 1; i >= 0; i--) {
+      const r = this.rockets[i];
+      r.v.y -= 15 * dt;
+      r.m.position.addScaledVector(r.v, dt);
+      if (Math.random() < 0.5) this.burst(r.m.position.clone(), ['#ffe082', '#ffffff'], 1, 0.5, true);
+      if (r.v.y > 3) continue;
+      const geo = this.burstGeo || (this.burstGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22));
+      if (!this.disposables.includes(geo)) this.disposables.push(geo);
+      for (let k = 0; k < 48; k++) {
+        const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: r.colors[k % r.colors.length], transparent: true }));
+        m.position.copy(r.m.position);
+        m.scale.setScalar(2.3);
+        const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+        this.effects.push({ m, v: dir.multiplyScalar(7 + Math.random() * 3.5), life: 2, g: 2.5 });
+        this.scene.add(m);
+      }
+      sfx('boom');
+      this.scene.remove(r.m);
+      r.m.material.dispose();
+      this.rockets.splice(i, 1);
+    }
+  }
+
+  // ---------- Selfie ----------
+  takePhoto() {
+    if (this.photoBusy) return;
+    this.photoBusy = true;
+    if (!this.driving && !this.pose) this.emote = 'wave';
+    this.selfie = true;
+    sfx('click');
+    setTimeout(() => { this.photoReq = true; }, 800);
+  }
+
+  finishPhoto() {
+    this.photoReq = false;
+    const src = this.renderer.domElement;
+    const W = 1200, H = Math.round(W * src.height / src.width);
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.drawImage(src, 0, 0, W, H);
+    this.selfie = false;
+    this.emote = null;
+    // Rahmen und Schriftzug wie ein Sofortbild
+    g.lineWidth = 28; g.strokeStyle = '#ffffff'; g.strokeRect(14, 14, W - 28, H - 28);
+    const label = `⭐ HanaBlox · ${this.myName} · ${this.place || 'Hana-Stadt'} · ${new Date().toLocaleDateString('de-CH')}`;
+    g.font = '800 34px Nunito, Arial, sans-serif';
+    const tw = g.measureText(label).width;
+    g.fillStyle = 'rgba(124,77,255,0.88)';
+    g.beginPath(); g.roundRect((W - tw) / 2 - 22, H - 96, tw + 44, 56, 28); g.fill();
+    g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.fillText(label, (W - tw) / 2, H - 68);
+    const flash = document.createElement('div');
+    flash.className = 'photo-flash';
+    document.body.append(flash);
+    setTimeout(() => flash.remove(), 500);
+    sfx('pop');
+    c.toBlob(blob => { this.photoBusy = false; this.onPhoto?.(blob, c.toDataURL('image/jpeg', 0.85)); }, 'image/jpeg', 0.9);
+  }
+
   updateEffects(dt) {
     for (let i = this.effects.length - 1; i >= 0; i--) {
       const e = this.effects[i];
@@ -2098,6 +2184,14 @@ export class Game {
   // Kamera, die nicht durch Wände schaut
   updateCamera(dt) {
     const p = this.body.p;
+    // Selfie: Kamera steht vor der Figur und schaut sie an
+    if (this.selfie) {
+      const f = this.facing, sx = Math.sin(f), sz = Math.cos(f);
+      this.camera.position.set(p.x + sx * 4.6 + sz * 0.9, p.y + 3.1, p.z + sz * 4.6 - sx * 0.9);
+      this.camera.lookAt(p.x, p.y + (this.driving ? 1.9 : 1.7), p.z);
+      this.sky.position.copy(this.camera.position);
+      return;
+    }
     const target = new THREE.Vector3(p.x, p.y + (this.driving ? 2.6 : 2.3), p.z);
     this.camTarget.lerp(target, 1 - Math.exp(-dt * 18));
     const { yaw, pitch } = this.cam;
@@ -2151,10 +2245,11 @@ export class Game {
       this.updateLand();
     }
     this.sendState(now);
+    this.updateRockets(dt);
     this.renderer.render(this.scene, this.camera);
+    if (this.photoReq) this.finishPhoto();
   };
 
-  // Passt die Bildauflösung automatisch an, damit das Spiel flüssig bleibt.
   // Leistung anpassen, ohne dass das Bild unscharf wird: die Auflösung bleibt immer gleich,
   // bei langsamen Geräten werden nacheinander Schatten seltener/aus und die Sichtweite kürzer.
   adaptQuality(rawDt) {
@@ -2177,6 +2272,8 @@ export class Game {
     if (this.scene.fog) { this.scene.fog.far = far; this.scene.fog.near = far * 0.3; }
     this.camera.far = far + 40;
     this.camera.updateProjectionMatrix();
+    // Himmel muss innerhalb der Sichtweite liegen, sonst wird er schwarz
+    this.sky.scale.setScalar((far + 40) * 0.9 / 900);
   }
 
   onResize = () => {

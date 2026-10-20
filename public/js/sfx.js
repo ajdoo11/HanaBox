@@ -47,6 +47,8 @@ export function sfx(name) {
       case 'click': tone(1000, 900, 0.04, 'square', 0.04); break;
       case 'horn': tone(392, 392, 0.18, 'square', 0.06); tone(330, 330, 0.25, 'square', 0.06, 0.2); break;
       case 'bump': tone(120, 60, 0.15, 'triangle', 0.15); break;
+      case 'whoosh': tone(250, 1400, 0.45, 'sawtooth', 0.025); break;
+      case 'boom': tone(150, 40, 0.6, 'triangle', 0.25); for (let i = 0; i < 8; i++) tone(2000 + Math.random() * 2000, 1500, 0.04, 'square', 0.015, 0.15 + i * 0.05); break;
       case 'buy': [659, 880, 1319].forEach((f, i) => tone(f, f, 0.12, 'triangle', 0.1, i * 0.08)); break;
     }
   } catch { /* egal */ }

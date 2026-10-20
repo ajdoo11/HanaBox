@@ -1,6 +1,6 @@
 // Weitere Länder: Schneeland, Tropeninsel, Zauberwald. Man reist mit dem Flughafen dorthin.
 import { P, RAINBOW, PASTEL, rng } from './kit.js';
-import { makeReserve, shop, shopRow, houseRow, slideTower, pool, funPark, zoo, sportsField, camp, lighthouse, pier, mushroomHouses } from './places.js';
+import { makeReserve, shop, shopRow, houseRow, slideTower, pool, funPark, zoo, sportsField, camp, lighthouse, pier, mushroomHouses, fireworksButton } from './places.js';
 
 const job = (emoji, title, msg, stars = 5, time = 4) => ({ emoji, title: `${emoji} ${title}`, msg, stars, time });
 
@@ -62,6 +62,7 @@ function snowland(K, w) {
   deco(cx, 13.6, cz + 60, 1.4, 1.4, 1.4, '#ffd600', { shape: 'sphere', emissive: '#ffd600' });
   for (let i = 0; i < 30; i++) { const a = i * 2.4, h = 2.5 + (i % 10) * 1.0, rr = 4.2 - (i % 10) * 0.35; deco(cx + Math.cos(a) * rr, h, cz + 60 + Math.sin(a) * rr, 0.4, 0.4, 0.4, RAINBOW[i % 7], { shape: 'sphere', emissive: RAINBOW[i % 7], emissiveIntensity: 0.7 }); }
   for (const [x, z] of [[-12, 52], [12, 52], [-12, 68], [12, 68]]) snowman(cx + x, cz + z);
+  fireworksButton(K, cx - 4, cz + 46);
   box(cx + 15, 0, cz + 74, 4, 1.4, 2, '#d32f2f', { act: 'menu', title: '☕ Heisse Schokolade', menu: ['cocoa', 'cookie', 'cake'], tex: 'wood' });
   deco(cx + 15, 1.4, cz + 74.8, 4.4, 2.6, 0.2, '#ffffff', { tex: 'stripes' });
   for (const [x, z, rot] of [[-8, 74, Math.PI], [8, 46, 0]]) bench(cx + x, cz + z, rot, '#a1887f');
@@ -233,6 +234,7 @@ function tropen(K, w) {
   const hut = (x, z, door, name) => building({ x, z, w: 10, d: 8, h: 5, wall: '#ffcc80', wallTex: 'wood', roof: 'pitched', roofColor: '#d7b56d', door, text: name, to: 'house2', name });
   hut(cx - 40, cz + 70, 's', 'Hütte Kokosnuss'); hut(cx - 20, cz + 70, 's', 'Hütte Ananas'); hut(cx + 0, cz + 70, 's', 'Hütte Mango');
   hut(cx - 90, cz + 20, 'e', 'Hütte Papagei'); hut(cx - 90, cz + 40, 'e', 'Hütte Delfin');
+  fireworksButton(K, cx + 2, cz + 84);
   // Tiki-Bar
   box(cx - 10, 0, cz + 92, 6, 1.4, 2, '#8d6e63', { act: 'menu', title: '🍹 Tiki-Bar', menu: ['coconut', 'pineapple', 'mango', 'juice', 'icecream'], tex: 'wood' });
   for (const s of [-1, 1]) deco(cx - 10 + s * 2.8, 0, cz + 91.3, 0.3, 4, 0.3, '#795548');
@@ -377,6 +379,7 @@ function zauber(K, w) {
       deco(cx + Math.cos(t) * R, Math.sin(t) * R, cz + 40, 1.6, 0.8, 0.8, RAINBOW[i], { emissive: RAINBOW[i], emissiveIntensity: 0.4, noShadow: true });
     }
   }
+  fireworksButton(K, cx + 6, cz + 63);
   it('unicorn', cx - 8, 0.1, cz + 52); it('unicorn', cx + 10, 0.1, cz + 56); it('fox', cx + 30, 0.1, cz + 60);
   // Feenkreis zum Tanzen
   for (let i = 0; i < 12; i++) {
