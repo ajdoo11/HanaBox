@@ -78,6 +78,9 @@ const server = http.createServer(async (req, res) => {
   let url;
   try { url = decodeURIComponent(req.url.split('?')[0]); } catch { res.writeHead(400); res.end(); return; }
 
+  // Lebenszeichen (weckt den schlafenden Online-Server, auch von GitHub Pages aus)
+  if (url === '/health') { res.writeHead(200, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }); res.end('ok'); return; }
+
   // API-Routen
   if (url === '/api/children' && req.method === 'GET') {
     const user = await verifyToken(req.headers.authorization);

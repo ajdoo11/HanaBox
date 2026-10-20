@@ -230,10 +230,28 @@ function loading(text) {
   if (text) $('loadingText').textContent = text;
 }
 
-function connect(opts) {
+// Ein kostenloser Online-Server schläft nach einer Pause ein: erst wecken, dann verbinden
+async function wakeServer() {
+  const health = SERVER_URL.replace(/^ws/, 'http').replace(/\/ws\/?$/, '') + '/health';
+  const until = Date.now() + 100000;
+  for (let i = 0; Date.now() < until; i++) {
+    try { if ((await fetch(health, { cache: 'no-store' })).ok) return true; } catch { /* schläft noch */ }
+    if (i === 1) loading('Server wird geweckt … das dauert bis zu einer Minute ☕');
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  return false;
+}
+
+async function connect(opts) {
   if (!profile.name) { askName(() => connect(opts)); return; }
   $('menuError').textContent = '';
   loading('Verbinde…');
+  if (SERVER_URL && !localMode && !(await wakeServer())) {
+    loading(null);
+    if (STATIC_HOST) { localMode = true; connect(opts); return; }
+    $('menuError').textContent = 'Der Online-Server antwortet nicht. Bitte später nochmal versuchen.';
+    return;
+  }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = localMode ? new LocalSocket() : new WebSocket(SERVER_URL || `${proto}://${location.host}/ws`);
   let welcomed = false;
