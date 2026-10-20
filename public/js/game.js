@@ -63,7 +63,7 @@ export class Game {
     this.camInit = this.def.cam || { pitch: 0.38, dist: 14 };
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1200);
+    this.camera = new THREE.PerspectiveCamera(62, 1, 0.4, 1200);
     this.raycaster = new THREE.Raycaster();
     this.phys = new Physics();
     this.dynamic = [];
@@ -307,7 +307,7 @@ export class Game {
         const geo = partGeometry(p, true);
         const mat = makeMaterial(p);
         mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(p.x, p.k === 'ramp' ? 0 : p.y, p.z);
+        mesh.position.set(p.x, (p.k === 'ramp' ? 0 : p.y) + (p.lift || 0), p.z);
         mesh.castShadow = p.k !== 'baseplate';
         mesh.receiveShadow = true;
         parent.add(mesh);

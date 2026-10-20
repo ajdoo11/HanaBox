@@ -43,11 +43,12 @@ function boxUV(g, scale) {
 
 export function partGeometry(p, atOrigin = false) {
   let g;
-  const q = atOrigin ? { ...p, x: 0, y: p.k === 'ramp' ? p.y : 0, z: 0 } : p;
-  if (p.k === 'ramp') g = rampGeometry(q);
+  const lift = p.lift || 0;
+  const q = atOrigin ? { ...p, x: 0, y: p.k === 'ramp' ? p.y : 0, z: 0 } : { ...p, y: p.y + lift };
+  if (p.k === 'ramp') g = rampGeometry(lift && !atOrigin ? { ...q, y0: p.y0 + lift, y1: p.y1 + lift } : q);
   else {
     g = SHAPES[p.shape || 'box'](p);
-    g.scale(p.w, p.h, p.d);
+    g.scale(p.w + (p.gw || 0), p.h, p.d + (p.gd || 0));
     if (p.rx) g.rotateX(p.rx);
     if (p.rz) g.rotateZ(p.rz);
     if (p.ry) g.rotateY(p.ry);
@@ -84,8 +85,76 @@ export function makeMaterial(p) {
   return new THREE.MeshLambertMaterial(o);
 }
 
+// Gegen Flackern (Z-Fighting): Liegen zwei verschieden aussehende Flächen (fast) auf derselben Höhe übereinander,
+// wird die kleinere für die Darstellung etwas angehoben (p.lift). Physik und Laufhöhe bleiben unverändert.
+const LIFT_GAP = 0.05, LIFT_STEP = 0.06;
+export function fixCoplanar(parts) {
+  const items = [];
+  for (const p of parts) {
+    p.lift = 0;
+    if (p.invisible || p.k === 'sign' || p.m || ['sphere', 'cone', 'hemi'].includes(p.shape) || p.rx || p.rz || p.ry) continue;
+    if (p.k === 'ramp' && p.y0 !== p.y1) continue;
+    const top = p.k === 'ramp' ? p.y0 : p.y + p.h / 2;
+    items.push({ p, top, area: p.w * p.d, x0: p.x - p.w / 2, x1: p.x + p.w / 2, z0: p.z - p.d / 2, z1: p.z + p.d / 2, look: p.c + '|' + (p.tex || '') });
+  }
+  // grosse Flächen zuerst (bleiben unten), kleinere darüber
+  items.sort((a, b) => b.area - a.area);
+  const C = 16, grid = new Map(), bigs = [];
+  const cells = it => { const r = []; for (let gx = Math.floor(it.x0 / C); gx <= Math.floor(it.x1 / C); gx++) for (let gz = Math.floor(it.z0 / C); gz <= Math.floor(it.z1 / C); gz++) r.push(gx + ',' + gz); return r; };
+  for (const it of items) {
+    const near = new Set(bigs);
+    const big = it.area > 40000;
+    if (!big) for (const k of cells(it)) for (const o of grid.get(k) || []) near.add(o);
+    let eff = it.top;
+    for (let guard = 0; guard < 20; guard++) {
+      let bump = null;
+      for (const o of near) {
+        if (o.look === it.look || Math.abs(o.top + o.p.lift - eff) >= LIFT_GAP) continue;
+        if (Math.min(it.x1, o.x1) - Math.max(it.x0, o.x0) <= 0.05 || Math.min(it.z1, o.z1) - Math.max(it.z0, o.z0) <= 0.05) continue;
+        bump = Math.max(bump ?? -Infinity, o.top + o.p.lift + LIFT_STEP);
+      }
+      if (bump == null) break;
+      eff = Math.max(eff, bump);
+    }
+    it.p.lift = eff - it.top;
+    if (big) bigs.push(it);
+    else for (const k of cells(it)) (grid.get(k) || grid.set(k, []).get(k)).push(it);
+  }
+  fixWalls(parts);
+  return parts;
+}
+
+// Senkrechte Flächen genau in derselben Ebene (z.B. Pfosten und Schildtafel): das kleinere Teil wird minimal dicker gezeichnet
+function fixWalls(parts) {
+  const vis = parts.filter(p => !p.invisible && p.k !== 'sign' && p.k !== 'ramp' && !p.m && !p.shape && !p.rx && !p.ry && !p.rz && p.w * p.d < 40000);
+  for (const p of vis) { p.gw = 0; p.gd = 0; }
+  const grid = new Map(), C = 16;
+  for (const p of vis) for (let gx = Math.floor((p.x - p.w / 2) / C); gx <= Math.floor((p.x + p.w / 2) / C); gx++) for (let gz = Math.floor((p.z - p.d / 2) / C); gz <= Math.floor((p.z + p.d / 2) / C); gz++) (grid.get(gx + ',' + gz) || grid.set(gx + ',' + gz, []).get(gx + ',' + gz)).push(p);
+  // mehrere Durchgänge: bis keine zwei verschiedenfarbigen Wandflächen mehr bündig liegen
+  for (let pass = 0; pass < 6; pass++) {
+    let changed = false;
+    for (const list of grid.values()) for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], b = list[j];
+      if (a.c === b.c && (a.tex || '') === (b.tex || '')) continue;
+      const ya = a.y + a.lift, yb = b.y + b.lift;
+      if (Math.min(ya + a.h / 2, yb + b.h / 2) - Math.max(ya - a.h / 2, yb - b.h / 2) <= 0.05) continue;
+      for (const [ax, sz, g, ox, osz] of [['x', 'w', 'gw', 'z', 'd'], ['z', 'd', 'gd', 'x', 'w']]) {
+        if (Math.min(a[ox] + a[osz] / 2, b[ox] + b[osz] / 2) - Math.max(a[ox] - a[osz] / 2, b[ox] - b[osz] / 2) <= 0.05) continue;
+        const same = s => Math.abs((a[ax] + s * (a[sz] + a[g]) / 2) - (b[ax] + s * (b[sz] + b[g]) / 2)) < 0.02;
+        if (!same(-1) && !same(1)) continue;
+        const va = a.w * a.h * a.d, vb = b.w * b.h * b.d;
+        const small = va < vb || (va === vb && a[g] <= b[g]) ? a : b;
+        small[g] += 0.06;
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+}
+
 // Baut alle statischen Teile zusammengefasst. Gibt die Teile zurück, die ein eigenes Mesh brauchen.
 export function buildStatic(parts, scene, disposables) {
+  fixCoplanar(parts);
   const groups = new Map();
   const own = [];
   for (const p of parts) {
