@@ -65,9 +65,9 @@ Der Sprachchat funktioniert im Browser nur über eine sichere Adresse (**https**
 
 1. Das Projekt liegt auf GitHub (öffentlich).
 2. Auf **https://render.com** mit dem GitHub-Konto anmelden → **New** → **Blueprint** → dieses GitHub-Projekt wählen → **Apply**. Die Datei `render.yaml` stellt alles automatisch ein (kostenloser Plan).
-3. Nach ein paar Minuten zeigt Render eine Adresse wie `https://hanablox-xxxx.onrender.com`. Diese auf dem Tablet öffnen → Teilen → «Zum Home-Bildschirm».
+3. Nach ein paar Minuten zeigt Render eine Adresse wie `https://hanablox.onrender.com`. Diese auf dem Tablet öffnen → Teilen → «Zum Home-Bildschirm».
 4. Im Spiel: ☰ Menü → 🎤 Sprachchat einschalten und das Mikrofon erlauben.
-5. Damit auch der GitHub-Link den Server benutzt: in `public/js/config.js` bei `SERVER_URL` die Adresse eintragen, z.B. `'wss://hanablox-xxxx.onrender.com/ws'`.
+5. Damit auch der GitHub-Link den Server benutzt: in `public/js/config.js` bei `SERVER_URL` die Adresse eintragen, z.B. `'wss://hanablox.onrender.com/ws'`.
 
 Hinweise zum kostenlosen Plan: Nach 15 Minuten ohne Spieler schläft der Server ein; der erste Aufruf danach dauert etwa eine Minute. Gebaute Klötze werden bei einem Neustart des Servers zurückgesetzt.
 
