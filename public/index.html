@@ -24,35 +24,26 @@
     <div class="logo big">Hana<span>Blox</span></div>
     <p class="auth-sub">Sicherer Spielspass für Kinder</p>
 
+    <div id="authWait" hidden><p class="auth-sub">⏳ Verbinde mit dem Server …</p></div>
+
     <div id="authLogin">
-      <h2>Eltern-Anmeldung</h2>
-      <label class="field">E-Mail <input id="authEmail" type="email" autocomplete="email"></label>
+      <h2>Anmelden</h2>
+      <label class="field">Spielername <input id="authName" maxlength="14" autocomplete="username" autocapitalize="off" spellcheck="false"></label>
       <label class="field">Passwort <input id="authPass" type="password" autocomplete="current-password"></label>
       <p id="authError" class="error"></p>
       <button id="btnLogin" class="btn primary big wide">Anmelden</button>
       <button id="btnShowReg" class="btn big wide">Neues Konto erstellen</button>
-      <button id="btnSkipAuth" class="btn small">Ohne Anmeldung spielen</button>
     </div>
 
     <div id="authRegister" hidden>
-      <h2>Konto erstellen</h2>
-      <label class="field">E-Mail <input id="regEmail" type="email" autocomplete="email"></label>
-      <label class="field">Passwort (min. 6 Zeichen) <input id="regPass" type="password" minlength="6" autocomplete="new-password"></label>
-      <label class="field">Passwort wiederholen <input id="regPass2" type="password" autocomplete="new-password"></label>
+      <h2>Neues Konto</h2>
+      <p class="auth-sub">Wähle deinen Spielernamen und ein Passwort. Merk dir beides gut!</p>
+      <label class="field">Spielername <input id="regName" maxlength="14" autocomplete="username" autocapitalize="off" spellcheck="false"></label>
+      <label class="field">Passwort (mind. 4 Zeichen) <input id="regPass" type="password" autocomplete="new-password"></label>
+      <label class="field">Passwort nochmal <input id="regPass2" type="password" autocomplete="new-password"></label>
       <p id="regError" class="error"></p>
-      <button id="btnRegister" class="btn primary big wide">Registrieren</button>
-      <button id="btnShowLogin" class="btn big wide">Zurück zur Anmeldung</button>
-    </div>
-
-    <div id="authChildren" hidden>
-      <h2>Wer spielt heute?</h2>
-      <div id="childList" class="child-grid"></div>
-      <div class="add-child-row">
-        <input id="childNameInput" maxlength="14" placeholder="Neuer Spielername">
-        <button id="btnAddChild" class="btn primary">+ Hinzufügen</button>
-      </div>
-      <p id="childError" class="error"></p>
-      <button id="btnLogout" class="btn small">Abmelden</button>
+      <button id="btnRegister" class="btn primary big wide">Konto erstellen</button>
+      <button id="btnShowLogin" class="btn big wide">Ich habe schon ein Konto</button>
     </div>
   </div>
 </section>
@@ -64,17 +55,18 @@
     <div class="top-right">
       <div class="star-chip" title="Deine Sterne">⭐ <b class="starCount">0</b></div>
       <button id="btnQuestsHome" class="btn" title="Aufgaben">🏆</button>
+      <button id="btnAccountLogout" class="btn" title="Abmelden" hidden>🚪</button>
       <button id="btnAvatar" class="btn avatar-btn"><canvas id="miniAvatar" width="96" height="96"></canvas><span>Avatar &amp; Shop</span></button>
     </div>
   </header>
   <div class="hello">Hallo <b id="helloName"></b>! Was möchtest du spielen?</div>
-  <div id="recentBox" hidden>
+  <div id="recentBox" hidden data-off="1">
     <h2 class="section">▶ Weiterspielen</h2>
     <div id="recentRow" class="recent-row"></div>
   </div>
   <h2 class="section">🎮 Spiele</h2>
   <div id="gameGrid" class="grid"></div>
-  <div class="join-box">
+  <div class="join-box" id="joinBox">
     <span>🎟️ Code von Freunden:</span>
     <input id="joinCode" maxlength="6" placeholder="ABCD" autocomplete="off" autocapitalize="characters" spellcheck="false">
     <button id="btnJoin" class="btn primary">Beitreten</button>

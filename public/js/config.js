@@ -1,4 +1,6 @@
-// Adresse eines Online-Servers (z.B. 'wss://hanablox.onrender.com/ws').
-// Leer lassen: Läuft das Spiel beim eigenen Node-Server, wird dieser benutzt;
-// auf GitHub Pages läuft das Spiel dann ohne Server direkt im Browser (mit Bot-Freunden, ohne Sprachchat).
-export const SERVER_URL = 'wss://hanablox.onrender.com/ws';
+// Online-Server für die GitHub-Seite (GitHub kann selbst keinen Server starten).
+// Kommt die Seite direkt von einem HanaBlox-Server (PC oder Render), wird immer dieser benutzt.
+const ONLINE_SERVER = 'wss://hanablox.onrender.com/ws';
+
+const staticHost = location.hostname.endsWith('github.io') || location.protocol === 'file:';
+export const SERVER_URL = staticHost ? ONLINE_SERVER : '';

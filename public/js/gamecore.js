@@ -5,7 +5,8 @@ import { townCellAllowed, LAND_DEFS } from './lands.js';
 import { Bot, randomAvatar, worldPhysics } from './bots.js';
 
 // storage: { read(kind, code), write(kind, code, data), exists(kind, code) } mit kind = 'build' | 'town'
-export function createGameCore({ storage, log = () => {} }) {
+// authenticate(token): liefert das Konto ({ name }) – ohne diese Funktion (im Browser) wählt man den Namen selbst
+export function createGameCore({ storage, log = () => {}, authenticate = null }) {
   // ---------- Räume ----------
   const rooms = new Map();
   // Alle spielen zusammen in derselben Welt
@@ -161,7 +162,7 @@ export function createGameCore({ storage, log = () => {} }) {
     }
     saveSoon() {
       clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => this.save(), 2000);
+      this.saveTimer = setTimeout(() => this.save(), 5000);
     }
     save() {
       clearTimeout(this.saveTimer);
@@ -300,7 +301,9 @@ export function createGameCore({ storage, log = () => {} }) {
 
   function joinRoom(client, m) {
     if (client.room) return;
-    const name = sanitizeName(m.name);
+    const account = authenticate ? authenticate(m.token) : null;
+    if (authenticate && !account) return send(client.ws, { t: 'error', code: 'login', msg: 'Bitte melde dich zuerst an.' });
+    const name = account ? account.name : sanitizeName(m.name);
     const avatar = sanitizeAvatar(m.avatar);
     let room = rooms.get(SHARED_CODE);
     if (!room) { room = new Room(SHARED_CODE, 'town'); rooms.set(SHARED_CODE, room); }
@@ -590,5 +593,7 @@ export function createGameCore({ storage, log = () => {} }) {
   }, 66);
 
 
-    return { connect, message, disconnect, rooms };
+    function saveAll() { for (const room of rooms.values()) if (room.game === 'town' || room.game === 'build') room.save(); }
+
+  return { connect, message, disconnect, rooms, saveAll };
 }

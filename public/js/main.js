@@ -7,7 +7,7 @@ import { Game } from './game.js';
 import { unlockAudio, sfx, setMuted } from './sfx.js';
 import { profile, saveName, saveAvatar, saveMuted, saveGrab, addRecent, removeRecent } from './profile.js';
 import { avatarEditor, ALL_TABS } from './editor.js';
-import * as Auth from './auth.js';
+import * as Account from './account.js';
 import { SERVER_URL } from './config.js';
 import { LocalSocket } from './localserver.js';
 
@@ -111,22 +111,16 @@ function showMenu() {
   $('menu').hidden = false;
   $('avatarScreen').hidden = true;
   $('helloName').textContent = profile.name || 'du';
+  $('btnAccountLogout').hidden = !Account.token();
   showStars();
   renderRecent();
   renderMini();
 }
 
+// Alle spielen in derselben Welt: keine Codes und keine Raum-Liste mehr
 function renderRecent() {
-  const row = $('recentRow');
-  row.replaceChildren();
-  $('recentBox').hidden = profile.recent.length === 0;
-  for (const r of profile.recent) {
-    const g = GAMES[r.game];
-    if (!g) continue;
-    const b = el('button', { className: 'recent-card', onclick: () => { unlockAudio(); connect({ code: r.code }); } });
-    b.append(el('span', { className: 'e', textContent: g.emoji }), el('span', {}, g.name, el('small', { textContent: 'Code ' + r.code })));
-    row.append(b);
-  }
+  $('recentBox').hidden = true;
+  $('joinBox').hidden = true;
 }
 
 function renderGames() {
@@ -197,6 +191,7 @@ function openAvatar() {
   $('menu').hidden = true;
   $('avatarScreen').hidden = false;
   $('nameInput').value = profile.name;
+  $('nameInput').readOnly = !!Account.token();
   setPreviewAvatar(big);
   editor = avatarEditor($('avatarTabs'), $('avatarOptions'), ALL_TABS, a => {
     saveAvatar(a);
@@ -243,12 +238,12 @@ async function wakeServer() {
 }
 
 async function connect(opts) {
-  if (!profile.name) { askName(() => connect(opts)); return; }
+  if (localMode && !profile.name) { askName(() => connect(opts)); return; }
+  if (!localMode && !Account.token()) { showLogin(); return; }
   $('menuError').textContent = '';
   loading('Verbinde…');
   if (SERVER_URL && !localMode && !(await wakeServer())) {
     loading(null);
-    if (STATIC_HOST) { localMode = true; connect(opts); return; }
     $('menuError').textContent = 'Der Online-Server antwortet nicht. Bitte später nochmal versuchen.';
     return;
   }
@@ -257,7 +252,7 @@ async function connect(opts) {
   let welcomed = false;
   const myNet = { ws, send(m) { if (ws.readyState === 1) ws.send(JSON.stringify(m)); } };
   net = myNet;
-  ws.onopen = () => myNet.send({ t: 'join', ...opts, name: profile.name, avatar: profile.avatar, grab: profile.grab !== false });
+  ws.onopen = () => myNet.send({ t: 'join', ...opts, token: Account.token(), name: profile.name, avatar: profile.avatar, grab: profile.grab !== false });
   ws.onmessage = e => {
     let m;
     try { m = JSON.parse(e.data); } catch { return; }
@@ -273,6 +268,7 @@ async function connect(opts) {
     }
     if (m.t === 'error') {
       loading(null);
+      if (m.code === 'login') { ws.close(); Account.logout().then(showLogin); return; }
       $('menuError').textContent = m.msg;
       if (opts.code && m.code === 'notfound') { removeRecent(opts.code); renderRecent(); }
       ws.close();
@@ -284,8 +280,6 @@ async function connect(opts) {
     if (net !== myNet) return;
     loading(null);
     if (!welcomed) {
-      // Online-Server nicht erreichbar: auf GitHub Pages trotzdem spielen (im Browser)
-      if (STATIC_HOST && !localMode && !$('menuError').textContent) { localMode = true; connect(opts); return; }
       if (!$('menuError').textContent) $('menuError').textContent = 'Keine Verbindung zum Server. Läuft der Server?';
       return;
     }
@@ -449,113 +443,90 @@ document.addEventListener('pointerdown', unlockAudio, { once: true });
 buildChatPanel();
 renderGames();
 
-// ---------- Auth ----------
-const CHILD_EMOJIS = ['🧒', '👧', '👦', '🧒🏽', '👧🏻', '👦🏾', '🧒🏼', '👧🏿'];
-
+// ---------- Anmeldung (Kinder-Konto) ----------
 function showAuth(view) {
-  $('authLogin').hidden = view !== 'login';
-  $('authRegister').hidden = view !== 'register';
-  $('authChildren').hidden = view !== 'children';
+  for (const v of ['Wait', 'Login', 'Register']) $('auth' + v).hidden = view !== v.toLowerCase();
   $('authError').textContent = '';
   $('regError').textContent = '';
-  $('childError').textContent = '';
 }
 
-function renderChildren(children) {
-  const grid = $('childList');
-  grid.replaceChildren();
-  for (const c of children) {
-    const card = el('div', { className: 'child-card' });
-    const emoji = CHILD_EMOJIS[Math.abs(hashStr(c.id)) % CHILD_EMOJIS.length];
-    card.append(
-      el('span', { className: 'avatar-emoji', textContent: emoji }),
-      el('span', { textContent: c.name }),
-      el('span', { className: 'remove', textContent: '✕ Entfernen', onclick: async (e) => {
-        e.stopPropagation();
-        try { await Auth.removeChild(c.id); renderChildren(Auth.getChildren()); } catch {}
-      }})
-    );
-    card.onclick = () => {
-      Auth.setActiveChild(c);
-      if (!profile.name || profile.name === 'du') saveName(c.name);
-      $('authScreen').hidden = true;
-      showMenu();
-    };
-    grid.append(card);
+function showLogin() {
+  $('menu').hidden = true;
+  $('avatarScreen').hidden = true;
+  $('authScreen').hidden = false;
+  showAuth('login');
+}
+
+async function afterSignIn() {
+  // Neu laden, damit Figur, Sterne und Aufgaben aus dem Konto überall übernommen werden
+  location.replace(location.pathname);
+}
+
+async function authAction(btn, errEl, fn) {
+  errEl.textContent = '';
+  btn.disabled = true;
+  try {
+    if (!(await wakeServer())) throw new Error('Der Server antwortet nicht. Bitte nochmal versuchen.');
+    await fn();
+    await afterSignIn();
+  } catch (e) {
+    errEl.textContent = e.message || String(e);
+  } finally {
+    btn.disabled = false;
   }
 }
-
-function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return h; }
 
 $('btnShowReg').onclick = () => showAuth('register');
 $('btnShowLogin').onclick = () => showAuth('login');
-$('btnSkipAuth').onclick = () => { $('authScreen').hidden = true; showMenu(); };
 
-$('btnLogin').onclick = async () => {
-  const email = $('authEmail').value.trim(), pass = $('authPass').value;
-  if (!email || !pass) { $('authError').textContent = 'Bitte E-Mail und Passwort eingeben.'; return; }
-  try {
-    await Auth.login(email, pass);
-    const children = await Auth.loadChildren();
-    if (children.length > 0) { showAuth('children'); renderChildren(children); }
-    else showAuth('children');
-  } catch (e) {
-    $('authError').textContent = e.code === 'auth/invalid-credential' ? 'E-Mail oder Passwort falsch.'
-      : e.code === 'auth/too-many-requests' ? 'Zu viele Versuche. Warte kurz.'
-      : 'Fehler: ' + (e.message || e);
-  }
+$('btnLogin').onclick = () => {
+  const name = $('authName').value.trim(), pass = $('authPass').value;
+  if (!name || !pass) { $('authError').textContent = 'Bitte Spielername und Passwort eingeben.'; return; }
+  authAction($('btnLogin'), $('authError'), () => Account.login(name, pass));
 };
+$('authPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnLogin').click(); });
 
-$('btnRegister').onclick = async () => {
-  const email = $('regEmail').value.trim(), pass = $('regPass').value, pass2 = $('regPass2').value;
-  if (!email || !pass) { $('regError').textContent = 'Bitte alle Felder ausfüllen.'; return; }
-  if (pass.length < 6) { $('regError').textContent = 'Passwort muss mindestens 6 Zeichen haben.'; return; }
-  if (pass !== pass2) { $('regError').textContent = 'Passwörter stimmen nicht überein.'; return; }
-  try {
-    await Auth.register(email, pass);
-    showAuth('children');
-  } catch (e) {
-    $('regError').textContent = e.code === 'auth/email-already-in-use' ? 'Diese E-Mail ist bereits registriert.'
-      : e.code === 'auth/weak-password' ? 'Passwort zu schwach.'
-      : 'Fehler: ' + (e.message || e);
-  }
+$('btnRegister').onclick = () => {
+  const name = $('regName').value.trim(), pass = $('regPass').value, pass2 = $('regPass2').value;
+  if (name.length < 3) { $('regError').textContent = 'Der Spielername braucht mindestens 3 Zeichen.'; return; }
+  if (pass.length < 4) { $('regError').textContent = 'Das Passwort braucht mindestens 4 Zeichen.'; return; }
+  if (pass !== pass2) { $('regError').textContent = 'Die beiden Passwörter sind nicht gleich.'; return; }
+  authAction($('btnRegister'), $('regError'), () => Account.register(name, pass));
 };
+$('regPass2').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnRegister').click(); });
 
-$('btnAddChild').onclick = async () => {
-  const name = $('childNameInput').value.trim();
-  if (!name) { $('childError').textContent = 'Bitte einen Namen eingeben.'; return; }
-  try {
-    await Auth.addChild(name);
-    $('childNameInput').value = '';
-    renderChildren(Auth.getChildren());
-  } catch (e) { $('childError').textContent = e.message || 'Fehler'; }
-};
-$('childNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnAddChild').click(); });
-
-$('btnLogout').onclick = async () => {
-  await Auth.logout();
-  showAuth('login');
+$('btnAccountLogout').onclick = () => {
+  dialog((card, close) => {
+    card.append(el('div', { className: 'big-emoji', textContent: '🚪' }), el('h2', { textContent: `${profile.name} abmelden?` }),
+      el('p', { textContent: 'Dein Spielstand ist im Konto gespeichert. Du kannst dich jederzeit wieder anmelden.' }),
+      el('div', { className: 'row' },
+        el('button', { className: 'btn primary', textContent: 'Abmelden', onclick: async () => { close(); await Account.logout(); location.replace(location.pathname); } }),
+        el('button', { className: 'btn', textContent: 'Abbrechen', onclick: close })));
+  });
 };
 
 // ---------- Start ----------
 async function boot() {
-  if (Auth.isConfigured() && !STATIC_HOST) {
-    $('authScreen').hidden = false;
-    $('menu').hidden = true;
-    const user = await Auth.init();
-    if (user) {
-      const children = await Auth.loadChildren();
-      showAuth('children');
-      renderChildren(children);
-    } else {
-      showAuth('login');
-    }
-  } else {
+  if (localMode) {
     showMenu();
+    if (!profile.name) askName();
+    return;
   }
-  const urlCode = new URLSearchParams(location.search).get('code');
-  if (urlCode) $('joinCode').value = urlCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-  if (!profile.name) askName();
+  $('menu').hidden = true;
+  $('authScreen').hidden = false;
+  if (!Account.token()) { showAuth('login'); return; }
+  showAuth('wait');
+  try {
+    if (!(await wakeServer())) throw new Error('offline');
+    const me = await Account.check();
+    if (me?.reload) { location.replace(location.pathname); return; }
+    if (!me) { showAuth('login'); return; }
+    $('authScreen').hidden = true;
+    showMenu();
+  } catch {
+    showAuth('login');
+    $('authError').textContent = 'Der Server antwortet gerade nicht. Bitte die Seite neu laden.';
+  }
 }
 boot();
 
