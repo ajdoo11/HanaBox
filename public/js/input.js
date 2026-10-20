@@ -1,6 +1,5 @@
 // Steuerung: Touch-Joystick links, Kamera drehen rechts, Sprung-Knopf, Tastatur und Maus.
 
-const R = 60;
 
 export class Input {
   constructor(canvas, joyBase, joyKnob, jumpBtn) {
@@ -42,8 +41,9 @@ export class Input {
     if (!this.enabled) return;
     if (e.pointerType !== 'mouse' && e.clientX < innerWidth * 0.4 && !this.joy) {
       this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY };
-      this.joyBase.style.left = e.clientX - 70 + 'px';
-      this.joyBase.style.top = e.clientY - 70 + 'px';
+      const half = this.joyBase.offsetWidth / 2;
+      this.joyBase.style.left = e.clientX - half + 'px';
+      this.joyBase.style.top = e.clientY - half + 'px';
       this.joyBase.style.bottom = 'auto';
       this.joyBase.classList.add('active');
       return;
@@ -60,6 +60,7 @@ export class Input {
   move = e => {
     if (this.joy && e.pointerId === this.joy.id) {
       let dx = e.clientX - this.joy.ox, dy = e.clientY - this.joy.oy;
+      const R = this.joyBase.offsetWidth * 0.43;
       const l = Math.hypot(dx, dy);
       if (l > R) { dx *= R / l; dy *= R / l; }
       this.joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
