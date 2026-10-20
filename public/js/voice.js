@@ -13,6 +13,7 @@ export class VoiceChat {
     this.isEnabled = false;
   }
 
+  // Startet den Sprachchat. Ohne Mikrofon (verweigert/fehlt) hört man die anderen trotzdem.
   async start() {
     if (this.isEnabled) return true;
     try {
@@ -20,13 +21,14 @@ export class VoiceChat {
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false
       });
-      this.isEnabled = true;
-      this.game.net.send({ t: 'voice:ready' });
-      return true;
     } catch (e) {
-      console.warn('Mikrofon nicht verfügbar:', e);
-      return false;
+      console.warn('Mikrofon nicht verfügbar, nur zuhören:', e);
+      this.localStream = null;
     }
+    if (!this.game.net) return false;
+    this.isEnabled = true;
+    this.game.net.send({ t: 'voice:ready' });
+    return !!this.localStream;
   }
 
   stop() {
@@ -66,7 +68,7 @@ export class VoiceChat {
     const pc = this.createPC(peerId);
     if (this.localStream) {
       for (const track of this.localStream.getTracks()) pc.addTrack(track, this.localStream);
-    }
+    } else pc.addTransceiver('audio', { direction: 'recvonly' });
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     this.game.net.send({ t: 'voice:offer', targetId: peerId, sdp: offer.sdp });

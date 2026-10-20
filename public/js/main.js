@@ -309,6 +309,15 @@ function startGame(welcome, myNet) {
   input.reset();
   game = new Game({ renderer, input, net: myNet, welcome, name: profile.name, avatar: profile.avatar, onLeave: leave });
   window.hbGame = game; // zum Testen in der Browser-Konsole
+  // Sprachchat startet automatisch, sobald man online in der Welt ist
+  if (!localMode) {
+    const g = game;
+    g.voice.start().then(mic => {
+      if (game !== g) return;
+      $('gmVoice').textContent = mic ? '🎤 Sprachchat ein' : '🔈 Nur zuhören (kein Mikrofon)';
+      g.notice(mic ? '🎤 Sprachchat ist an – alle hören dich!' : '🔈 Du hörst die anderen. Mikrofon im Browser erlauben, um zu sprechen.', 3500);
+    });
+  }
 }
 
 function endGame() {

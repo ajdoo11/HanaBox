@@ -8,19 +8,11 @@ import { Bot, randomAvatar, worldPhysics } from './bots.js';
 export function createGameCore({ storage, log = () => {} }) {
   // ---------- Räume ----------
   const rooms = new Map();
-  const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const CODE_RE = /^[A-Z0-9]{4,6}$/;
-  const savedGame = code => (storage.exists('town', code) ? 'town' : null);
+  // Alle spielen zusammen in derselben Welt
+  const SHARED_CODE = 'HANA';
   const BOT_TARGET_DEFAULT = { town: 6, hangout: 4, tag: 4, coins: 4, obby: 0, build: 0 };
   let nextBotId = 100000;
 
-  function newCode() {
-    for (;;) {
-      let c = '';
-      for (let i = 0; i < 4; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
-      if (!rooms.has(c) && !savedGame(c)) return c;
-    }
-  }
 
   const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
   const num = (v, lo, hi) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0);
@@ -310,23 +302,9 @@ export function createGameCore({ storage, log = () => {} }) {
     if (client.room) return;
     const name = sanitizeName(m.name);
     const avatar = sanitizeAvatar(m.avatar);
-    let room;
-    if (m.create) {
-      if (!GAMES[m.game]) return send(client.ws, { t: 'error', msg: 'Dieses Spiel gibt es nicht.' });
-      const code = newCode();
-      room = new Room(code, m.game);
-      rooms.set(code, room);
-    } else {
-      const code = String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-      room = rooms.get(code);
-      const saved = !room && CODE_RE.test(code) ? savedGame(code) : null;
-      if (saved) {
-        room = new Room(code, saved);
-        rooms.set(code, room);
-      }
-      if (!room) return send(client.ws, { t: 'error', code: 'notfound', msg: 'Diesen Raum gibt es nicht (mehr). Prüfe den Code!' });
-    }
-    if (room.players.size >= MAX_PLAYERS) return send(client.ws, { t: 'error', msg: 'Der Raum ist voll (max. 10 Spieler).' });
+    let room = rooms.get(SHARED_CODE);
+    if (!room) { room = new Room(SHARED_CODE, 'town'); rooms.set(SHARED_CODE, room); }
+    if (room.players.size >= MAX_PLAYERS) return send(client.ws, { t: 'error', msg: `Die Welt ist voll (max. ${MAX_PLAYERS} Spieler).` });
 
     const sp = WORLDS[room.game].spawn;
     const p = { id: client.id, ws: client.ws, name, avatar, score: 0, state: [sp[0], sp[1], sp[2], Math.PI, 0, 0], dirty: false, grabbable: m.grab !== false, carrying: null, carriedBy: null };

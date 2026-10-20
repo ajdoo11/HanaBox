@@ -12,7 +12,7 @@ export const OLD_GAMES = {
   tag:     { name: 'Fangis', emoji: '🏃', desc: 'Wer «es» ist, muss die anderen fangen!', bg: 'linear-gradient(135deg,#c471f5,#fa71cd)' },
 };
 
-export const MAX_PLAYERS = 10;
+export const MAX_PLAYERS = 40;
 
 // Chat nur mit vorgegebenen Sätzen und Emojis – kein freier Text (sicher für Kinder).
 export const QUICK_CHAT = [

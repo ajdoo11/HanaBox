@@ -27,7 +27,7 @@ In der Hana-Stadt erscheinen rechts unten Knöpfe wie «✋ Nehmen», «😋 Ess
 ## Sicherheit für Kinder
 - **Nur private Räume:** Man kommt nur mit dem 4-stelligen Code in einen Raum. Es gibt keine öffentliche Liste, fremde Leute finden den Raum nicht.
 - **Kein freier Chat:** nur vorgegebene Sätze («Hallo!», «Komm mit!» …) und Emojis. Der Server lässt nichts anderes durch.
-- Namen werden gefiltert, höchstens 10 Spieler pro Raum.
+- Namen werden gefiltert. Alle spielen zusammen in derselben Welt (bis 40 Spieler), der Sprachchat startet automatisch.
 
 ## Starten (auf dem PC)
 1. Einmalig: Node.js installieren (https://nodejs.org), danach in diesem Ordner `npm install`.
