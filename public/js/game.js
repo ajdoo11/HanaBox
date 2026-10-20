@@ -1921,6 +1921,8 @@ export class Game {
     if (this.body.bounced) sfx('bounce');
     if (moving) {
       this.facing = lerpAngle(this.facing, Math.atan2(wx, wz), 1 - Math.exp(-dt * 14));
+      // Kamera geht beim Vorwärtslaufen hinter die Figur (nur Seitwärts dreht sie nicht, sonst läuft man im Kreis)
+      if (mv.y > 0.2 && performance.now() - this.cam.lastDrag > 800) this.cam.yaw = lerpAngle(this.cam.yaw, this.facing + Math.PI, 1 - Math.exp(-dt * 2.5 * mv.y));
       this.emote = null;
       if (this.gameKey === 'obby' && !this.obbyStart && !this.finished) this.obbyStart = performance.now();
     }

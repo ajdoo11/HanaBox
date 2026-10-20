@@ -12,9 +12,9 @@ export async function openStore(root) {
   const flush = () => Promise.allSettled([...pending]);
 
   if (key) {
-    const admin = (await import('firebase-admin')).default;
-    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(key)) });
-    const db = admin.firestore();
+    const { initializeApp, cert } = await import('firebase-admin/app');
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const db = getFirestore(initializeApp({ credential: cert(JSON.parse(key)) }));
     const col = name => db.collection('hanablox_' + name);
     // Firestore erlaubt keine verschachtelten Listen: Daten werden als JSON-Text gespeichert
     return {
