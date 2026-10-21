@@ -1,9 +1,9 @@
 // Avatar-Editor mit Shop (Sterne) und Berufen. Wird im Menü, in der Boutique, beim Friseur usw. benutzt.
-import { AVATAR_OPTIONS, JOBS } from './shared.js';
+import { AVATAR_OPTIONS, JOBS, KIDS } from './shared.js';
 import { profile, owns, price, buy } from './profile.js';
 
 export const ALL_TABS = [
-  ['jobs', '⭐ Berufe'], ['hair', 'Frisur'], ['hairColor', 'Haarfarbe'], ['face', 'Gesicht'], ['eyes', 'Augen'], ['skin', 'Haut'],
+  ['jobs', '⭐ Berufe'], ['kids', '👧 Kinder'], ['hair', 'Frisur'], ['hairColor', 'Haarfarbe'], ['face', 'Gesicht'], ['eyes', 'Augen'], ['skin', 'Haut'],
   ['shirtStyle', 'Oberteil'], ['shirt', 'Farbe Oberteil'], ['sleeve', 'Ärmel'], ['pantsStyle', 'Hose/Rock'], ['pants', 'Farbe Hose'],
   ['shoes', 'Schuhe'], ['hat', 'Hut'], ['acc', 'Accessoires'], ['pet', '🐾 Haustier'],
 ];
@@ -34,6 +34,15 @@ export function avatarEditor(tabsEl, optsEl, tabs, onChange, toast) {
     }
     optsEl.replaceChildren();
     const a = profile.avatar;
+    if (cur === 'kids') {
+      for (const kid of KIDS) {
+        const b = el('button', { className: 'opt job' });
+        b.append(el('span', { className: 'big', textContent: kid.emoji }), el('span', { textContent: kid.name }));
+        b.onclick = () => { onChange({ ...profile.avatar, ...kid.set }); toast?.(`${kid.emoji} ${kid.name}!`); };
+        optsEl.append(b);
+      }
+      return;
+    }
     if (cur === 'jobs') {
       for (const job of JOBS) {
         const b = el('button', { className: 'opt job' });

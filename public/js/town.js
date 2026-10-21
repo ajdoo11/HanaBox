@@ -2,6 +2,7 @@
 // die man betreten kann (jedes Haus hat eine eigene Innenwelt).
 import { P, RAINBOW, PASTEL, FACE, DIR, rng, createKit } from './kit.js';
 import { addLands, LAND_DEFS } from './lands.js';
+import { KIDS } from './shared.js';
 import { shopRow, pool, funPark, zoo, sportsField, camp, slideTower, fireworksButton } from './places.js';
 
 export const ROADS = [-210, -90, -30, 30, 90, 210];
@@ -91,6 +92,25 @@ export function makeTown() {
     flowers(cx - 16, cz + 16, 6, 4, 14); flowers(cx + 16, cz - 16, 4, 6, 12);
     tree(cx - 18, cz - 4); tree(cx + 18, cz + 4); tree(cx - 18, cz + 6, 0.8);
     pois.push({ x: cx + 8, z: cz + 8, act: 'idle' }, { x: cx, z: cz - 15, y: 1, act: 'dance' }, { x: cx - 8, z: cz - 8, act: 'wave' }, { x: cx + 13, z: cz + 13, act: 'idle' }, { x: cx - 14, z: cz + 4, act: 'idle' });
+  }
+
+  // ---------- Skulpturen der Kinder am Stadtplatz ----------
+  {
+    const statue = (x, z, kid, title) => {
+      const a = kid.set;
+      box(x, 0, z, 3.6, 1.2, 3.6, '#cfd8dc', { tex: 'stone' });
+      sign(title, x, 0.6, z + 1.85, 3.2, 0.9, 'z+', '#fff8e1', '#4e342e', false);
+      box(x - 0.45, 1.2, z, 0.75, 1.8, 0.8, a.pants, { tex: 'stone' });
+      box(x + 0.45, 1.2, z, 0.75, 1.8, 0.8, a.pants, { tex: 'stone' });
+      box(x, 3.0, z, 2.0, 1.9, 1.0, a.shirt, { tex: 'stone' });
+      box(x - 1.45, 3.0, z, 0.7, 1.8, 0.7, a.shirt, { tex: 'stone' });
+      box(x + 1.45, 3.0, z, 0.7, 1.8, 0.7, a.shirt, { tex: 'stone' });
+      box(x, 4.9, z, 1.4, 1.4, 1.2, a.skin, { tex: 'stone' });
+      deco(x, 5.65, z - 0.02, 1.6, 0.55, 1.5, a.hairColor, { tex: 'stone' });
+    };
+    statue(-9, 17, KIDS[0], '👧 Mint');
+    statue(0, 19, KIDS[1], '👧 Pink');
+    statue(9, 17, KIDS[2], '👦 Türkis');
   }
 
   // ---------- Wohnhäuser ----------

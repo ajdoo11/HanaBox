@@ -109,6 +109,13 @@ export const JOBS = [
   { name: 'Fee', emoji: '🧚', set: { shirt: '#ce93d8', shirtStyle: 8, sleeve: 0, hat: 5, acc: 9, pants: '#ba68c8', pantsStyle: 2 } },
 ];
 
+// Drei fertige Kinder-Figuren (Vorlagen, keine Fotos)
+export const KIDS = [
+  { name: 'Mädchen in Mint', emoji: '👧', set: { skin: '#ffe0bd', hair: 4, hairColor: '#6d4c41', face: 1, eyes: 1, shirt: '#a7f3d0', shirtStyle: 0, sleeve: 0, pants: '#263238', pantsStyle: 0, shoes: '#eceff1', hat: 0, acc: 0 } },
+  { name: 'Mädchen in Pink', emoji: '👧', set: { skin: '#ffe0bd', hair: 6, hairColor: '#8d6e63', face: 2, eyes: 2, shirt: '#e91e63', shirtStyle: 0, sleeve: 0, pants: '#f8bbd0', pantsStyle: 1, shoes: '#eceff1', hat: 0, acc: 0 } },
+  { name: 'Junge in Türkis', emoji: '👦', set: { skin: '#ffe0bd', hair: 2, hairColor: '#8d5524', face: 0, eyes: 0, shirt: '#4dd0c8', shirtStyle: 0, sleeve: 1, pants: '#1565c0', pantsStyle: 0, shoes: '#eceff1', hat: 0, acc: 0 } },
+];
+
 // Fahrzeuge (nur zum Herumfahren)
 export const VEHICLES = [
   { key: 'car', name: 'Cabrio', emoji: '🚗', speed: 24, turn: 2.0, half: 1.15, height: 1.6 },

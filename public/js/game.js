@@ -99,6 +99,7 @@ export class Game {
     this.parked = [];
     this.rockets = [];
     this.riding = null;
+    try { this.friends = new Set(JSON.parse(localStorage.getItem('hb_friends') || '[]')); } catch { this.friends = new Set(); }
     this.pose = null;
     this.held = null;
     this.voice = new VoiceChat(this);
@@ -625,6 +626,10 @@ export class Game {
       const r = this.remotes.get(id);
       n.textContent = (r?.bot ? '🤖 ' : '') + this.nameOf(id) + (id === this.it ? ' 🏃' : '');
       row.append(n);
+      if (id !== this.myId && r && !r.bot && !r.staticBot) {
+        if (this.friends.has(r.name)) n.textContent += ' ⭐';
+        row.onclick = () => this.toggleFriend(r.name);
+      }
       const v = document.createElement('span');
       v.className = 'sb-val';
       const s = sc(id);
@@ -693,6 +698,7 @@ export class Game {
   removeRemote(id) {
     const r = this.remotes.get(id);
     if (!r) return;
+    if (r.tag) r.tag.removeFromParent();
     r.char.dispose();
     this.syncPet(id, null);
     this.remotes.delete(id);
@@ -1030,8 +1036,9 @@ export class Game {
       const tx = ox - Math.sin(orot) * 1.8 + Math.cos(orot) * 1.0 * pet.side;
       const tz = oz - Math.cos(orot) * 1.8 - Math.sin(orot) * 1.0 * pet.side;
       const dx = tx - pet.pos.x, dz = tz - pet.pos.z, d = Math.hypot(dx, dz);
-      if (d > 20 || Math.abs(oy - pet.pos.y) > 8) { pet.pos.set(tx, oy, tz); }
-      else if (d > 0.4) {
+      const rest = !!pet.rest;
+      if (!rest && (d > 20 || Math.abs(oy - pet.pos.y) > 8)) { pet.pos.set(tx, oy, tz); }
+      else if (!rest && d > 0.4) {
         const sp = Math.min(d * 3, 16) * dt;
         pet.pos.x += (dx / d) * sp; pet.pos.z += (dz / d) * sp;
         pet.rot = lerpAngle(pet.rot, Math.atan2(dx, dz), 1 - Math.exp(-dt * 10));
@@ -1042,12 +1049,21 @@ export class Game {
       pet.pos.y += (gy - pet.pos.y) * (1 - Math.exp(-dt * 12));
       pet.t += dt;
       if (pet.hop > 0) pet.hop = Math.max(0, pet.hop - dt);
-      const moving = d > 0.6;
+      const moving = !rest && d > 0.6;
       const inner = pet.mesh.userData.inner;
       inner.position.y = Math.abs(Math.sin(pet.t * (moving || pet.hop ? 10 : 2))) * (pet.hop ? 0.5 : moving ? 0.22 : 0.04);
       pet.mesh.position.copy(pet.pos);
       pet.mesh.rotation.y = pet.rot;
     }
+  }
+
+  togglePetRest() {
+    const pet = this.pets.get(this.myId);
+    if (!pet) return;
+    pet.rest = !pet.rest;
+    pet.hop = 0.6;
+    this.char.say(pet.rest ? '🏠 Tier bleibt hier' : '🐾 Komm, Tier!');
+    sfx('pet');
   }
 
   petMyPet() {
@@ -1624,6 +1640,8 @@ export class Game {
           if (it.cat === 'pet') list.push(['❤️ Streicheln', () => this.petItem(it)]);
         }
       }
+      const myPet = this.pets.get(this.myId);
+      if (myPet && this.held == null && list.length < 3) list.push([myPet.rest ? '🐾 Tier zurückrufen' : '🏠 Tier hier ablegen', () => this.togglePetRest()]);
       const ride = !this.driving && this.nearestRideable();
       if (ride) list.unshift([`🪑 ${ride.name} mitfahren`, () => this.net.send({ t: 'ride', id: ride.id })]);
       const lad = !this.body.climbing && !this.autoClimb && this.nearestLadder();
@@ -2257,6 +2275,45 @@ export class Game {
     }
   }
 
+  toggleFriend(name) {
+    if (this.friends.has(name)) { this.friends.delete(name); this.notice(`${name} ist kein Freund mehr`, 2000); }
+    else { this.friends.add(name); this.notice(`⭐ ${name} ist jetzt dein Freund – du findest ihn schneller!`, 2600); sfx('magic'); }
+    localStorage.setItem('hb_friends', JSON.stringify([...this.friends]));
+    this.renderScores();
+  }
+
+  // Namen von Freunden leuchten durch Gebäude, sobald sie weiter weg sind (nah dran sieht man sie ohnehin)
+  nameTag(text) {
+    const c = document.createElement('canvas');
+    c.width = 320; c.height = 72;
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgba(40,20,80,0.82)';
+    g.beginPath(); g.roundRect(4, 6, 312, 60, 30); g.fill();
+    g.fillStyle = '#ffffff'; g.font = '800 34px Nunito, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('⭐ ' + text, 160, 37);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
+    const s = new THREE.Sprite(mat);
+    s.scale.set(5, 1.125, 1);
+    s.renderOrder = 999;
+    this.scene.add(s);
+    this.disposables.push(tex, mat);
+    return s;
+  }
+
+  updateFriendTags() {
+    for (const r of this.remotes.values()) {
+      const isFriend = !r.bot && !r.staticBot && this.friends.has(r.name);
+      if (!isFriend) { if (r.tag) r.tag.visible = false; continue; }
+      if (!r.tag) r.tag = this.nameTag(r.name);
+      const d = r.pos.distanceTo(this.body.p);
+      r.tag.visible = d > 9 && d < 160;
+      r.tag.position.set(r.pos.x, r.pos.y + 4.6, r.pos.z);
+      r.tag.material.opacity = Math.min(1, Math.max(0, (d - 9) / 12));
+    }
+  }
+
   updateLOD() {
     const p = this.body.p;
     for (const v of this.parked) v.visible = Math.abs(v.position.x - p.x) < 90 && Math.abs(v.position.z - p.z) < 90;
@@ -2368,6 +2425,7 @@ export class Game {
     this.updateDynamic(t);
     this.updateLocal(dt, t);
     this.updateRemotes(dt);
+    this.updateFriendTags();
     this.updateGameRules(dt, t);
     this.updateCamera(dt);
     this.handleTaps();

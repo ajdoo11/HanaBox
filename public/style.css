@@ -28,11 +28,11 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 
 /* ---------- Menü ---------- */
 .screen {
-  position: fixed; inset: 0; overflow-y: auto; touch-action: pan-y;
+  position: fixed; inset: 0; height: 100vh; height: 100dvh; overflow-y: auto; touch-action: pan-y;
   padding: max(14px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 24px max(18px, env(safe-area-inset-left));
   background: linear-gradient(160deg, #a18cff 0%, #ff8fc8 55%, #ffd39b 100%);
 }
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
 .topbar .title { font-size: 26px; font-weight: 900; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,0.2); }
 .logo { font-size: 42px; font-weight: 900; color: #fff; letter-spacing: -1px; text-shadow: 0 4px 0 rgba(0,0,0,0.18); }
 .logo span { color: #fff36b; }
@@ -215,7 +215,7 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .bigmsg .btn { margin: 12px 6px 0; }
 
 /* ---------- Roblox-artige Startseite & Sterne ---------- */
-.top-right { display: flex; align-items: center; gap: 10px; }
+.top-right { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .star-chip {
   background: #fff; border-radius: 999px; padding: 8px 16px; font-weight: 900; font-size: 18px;
   box-shadow: 0 4px 0 rgba(0,0,0,0.15); white-space: nowrap; color: #b26a00;
