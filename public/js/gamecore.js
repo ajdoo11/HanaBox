@@ -1,5 +1,5 @@
 // Spiel-Server-Kern: Räume, Bots und Spielregeln. Läuft im Node-Server und – ohne Server (z.B. GitHub Pages) – direkt im Browser.
-import { GAMES, MAX_PLAYERS, BLOCK_TYPES, BUILD, ITEM_TYPES, ITEM_INDEX, MAX_ITEMS, VEHICLES, sanitizeAvatar, sanitizeName, validChat, ANIMS } from './shared.js';
+import { GAMES, MAX_PLAYERS, BLOCK_TYPES, BUILD, ITEM_TYPES, ITEM_INDEX, MAX_ITEMS, VEHICLES, sanitizeAvatar, sanitizeName, validChat, ANIMS, vehDecode } from './shared.js';
 import { WORLDS } from './worlds.js';
 import { townCellAllowed, LAND_DEFS } from './lands.js';
 import { Bot, randomAvatar, worldPhysics } from './bots.js';
@@ -46,7 +46,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
       for (const p of this.players.values()) if (p !== except && p.ws.readyState === 1) p.ws.send(s);
     }
 
-    pub(p) { return p.bot ? p.pub() : { id: p.id, name: p.name, avatar: p.avatar, score: p.score, state: p.state }; }
+    pub(p) { return p.bot ? p.pub() : { id: p.id, name: p.name, avatar: p.avatar, score: p.score, state: p.state, rideOf: p.rideOf ?? null }; }
 
     randomSpawn() {
       const s = WORLDS[this.game].spawn;
@@ -233,6 +233,15 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
 
     tick(dt) {
       const now = Date.now();
+      if (this.game === 'town') {
+        for (const p of this.players.values()) {
+          if (p.rideOf == null) continue;
+          const d = this.players.get(p.rideOf);
+          if (!d || !d.state[5]) { endRide(this, p); continue; }
+          p.state = [d.state[0], d.state[1], d.state[2], d.state[3], ANIMS.indexOf('drive'), 0];
+          p.dirty = true;
+        }
+      }
       if (this.game === 'coins' && this.players.size) {
         if (!this.round) this.startCoinRound();
         else if (!this.round.pause && now >= this.round.endsAt) {
@@ -324,11 +333,22 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     log(`${name} → Raum ${room.code} (${GAMES[room.game].name}), ${room.players.size} Spieler`);
   }
 
+  function endRide(room, p) {
+    if (!p || p.rideOf == null) return;
+    const d = room.players.get(p.rideOf);
+    if (d && d.passenger === p.id) d.passenger = null;
+    p.rideOf = null;
+    p.dirty = true;
+    room.broadcast({ t: 'ride', id: p.id, by: null });
+  }
+
   function leaveRoom(client) {
     const room = client.room;
     if (!room) return;
     const p = client.player;
     room.releaseLinks(p);
+    if (p.rideOf != null) endRide(room, p);
+    if (p.passenger != null) endRide(room, room.players.get(p.passenger));
     room.players.delete(client.id);
     if (room.game === 'town') { room.dropAll(p); room.saveSoon(); }
     for (const b of room.bots.values()) if (b.follow?.id === p.id) b.follow = null;
@@ -352,7 +372,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     switch (m.t) {
       case 's': {
         const s = m.s;
-        if (!Array.isArray(s) || s.length < 5) return;
+        if (!Array.isArray(s) || s.length < 5 || p.rideOf != null) return;
         const a = Number.isInteger(s[4]) && s[4] >= 0 && s[4] < ANIMS.length ? s[4] : 0;
         const v = Number.isInteger(s[5]) && s[5] >= 0 && s[5] <= VEHICLES.length * 16 ? s[5] : 0;
         p.state = [num(s[0], -3200, 3200), num(s[1], -100, 300), num(s[2], -3200, 3200), num(s[3], -50, 50), a, v];
@@ -555,6 +575,19 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
         room.broadcast({ t: 'fireworks', x, z, by: p.name });
         break;
       }
+      case 'ride': {
+        const d = room.players.get(m.id);
+        if (room.game !== 'town' || !d || d === p || p.rideOf != null || d.rideOf != null || d.passenger != null) return;
+        const v = d.state[5] ? vehDecode(d.state[5]) : null;
+        if (!v || !VEHICLES[v.type] || !['car', 'jeep', 'boat', 'speedboat'].includes(VEHICLES[v.type].key)) return;
+        if (Math.hypot(d.state[0] - p.state[0], d.state[2] - p.state[2]) > 6) return;
+        p.rideOf = d.id;
+        d.passenger = p.id;
+        p.dirty = true;
+        room.broadcast({ t: 'ride', id: p.id, by: d.id });
+        break;
+      }
+      case 'unride': endRide(room, p); break;
       case 'tag': {
         if (room.game !== 'tag' || room.it !== p.id || !room.round || room.round.pause || room.round.waiting) return;
         if (now - room.itSince < 1800) return;

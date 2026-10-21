@@ -29,6 +29,37 @@ export function addStars(n) {
   window.dispatchEvent(new CustomEvent('stars', { detail: { n, total: profile.stars } }));
 }
 
+// Arbeit (Jobs, Einkauf, Zahnarzt) bringt pro Tag höchstens WORK_DAILY Sterne
+export const WORK_DAILY = 90;
+const JOB_WAIT = 120000;
+const dayKey = () => new Date().toDateString();
+
+export function workLeft() {
+  if (store.get('workday', '') !== dayKey()) return WORK_DAILY;
+  return Math.max(0, WORK_DAILY - store.get('workearned', 0));
+}
+
+export function earnWork(n) {
+  const today = dayKey();
+  if (store.get('workday', '') !== today) { store.set('workday', today); store.set('workearned', 0); }
+  const done = store.get('workearned', 0);
+  const give = Math.max(0, Math.min(n, WORK_DAILY - done));
+  store.set('workearned', done + give);
+  if (give) addStars(give);
+  return give;
+}
+
+// Jeder Arbeitsplatz ist nach der Arbeit 2 Minuten gesperrt
+export function jobWait(key) {
+  const last = store.get('jobdone', {})[key] || 0;
+  return Math.max(0, JOB_WAIT - (Date.now() - last));
+}
+export function markJob(key) {
+  const m = store.get('jobdone', {});
+  m[key] = Date.now();
+  store.set('jobdone', m);
+}
+
 export function price(kind, i) { return PRICES[kind]?.[i] || 0; }
 export function owns(kind, i) { return !price(kind, i) || profile.owned.has(kind + ':' + i); }
 export function buy(kind, i) {

@@ -103,7 +103,7 @@ export function openTeethGame({ title = '🦷 Zähne putzen', patient = 'dir', o
   const act = e => {
     const p = at(e);
     for (const s of spots) {
-      if (s.life <= 0 || Math.hypot(s.x - p.x, s.y - p.y) > s.r + 18) continue;
+      if (s.life <= 0 || Math.hypot(s.x - p.x, s.y - p.y) > s.r + 44) continue;
       if (tool === 'brush' && s.kind === 'dirt') {
         s.life -= 0.12;
         if (Math.random() < 0.3) sparkles.push({ x: s.x, y: s.y, t: 1, c: '#e1f5fe' });

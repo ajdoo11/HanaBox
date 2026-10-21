@@ -19,8 +19,8 @@ const $ = id => document.getElementById(id);
 setMuted(profile.muted);
 
 // ---------- Renderer ----------
-const renderer = new THREE.WebGLRenderer({ canvas: $('view'), antialias: devicePixelRatio < 1.5, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
+const renderer = new THREE.WebGLRenderer({ canvas: $('view'), antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;

@@ -169,6 +169,10 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
   position: absolute; left: 50%; top: 50%; width: calc(var(--joy) * 0.39); height: calc(var(--joy) * 0.39);
   margin: calc(var(--joy) * -0.195) 0 0 calc(var(--joy) * -0.195); border-radius: 50%; background: rgba(255,255,255,0.85); box-shadow: 0 3px 8px rgba(0,0,0,0.25);
 }
+.minimap {
+  position: absolute; left: var(--sl); bottom: calc(var(--sb) + var(--joy) + var(--u) * 1.4);
+  width: calc(var(--u) * 12); height: auto; aspect-ratio: 200 / 222; pointer-events: none;
+}
 .hud-right {
   position: absolute; right: var(--sr); bottom: var(--sb);
   display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; gap: var(--gap); align-items: end;
@@ -299,6 +303,7 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
   .actions { bottom: calc(var(--sb) + var(--ctrl-h) + var(--gap) * 2 + var(--bar-h)); max-width: calc(100vw - var(--sl) - var(--sr)); }
   .hud-status { top: calc(var(--st) + var(--u) * 12.5); }
   .game-title { display: none; }
+  .minimap { bottom: calc(var(--sb) + var(--ctrl-h) + var(--gap) * 2 + var(--bar-h)); width: calc(var(--u) * 10); }
 }
 }
 

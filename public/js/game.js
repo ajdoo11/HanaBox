@@ -9,7 +9,7 @@ import { makeItemMesh } from './items.js';
 import { makeVehicle, spinWheels, SEATS } from './vehicles.js';
 import { buildStatic, partGeometry, makeMaterial, signMesh, ringMesh, ringMaterial, skyDome } from './geo.js';
 import { getTexture } from './textures.js';
-import { addStars, saveAvatar } from './profile.js';
+import { addStars, saveAvatar, earnWork, jobWait, markJob, workLeft, WORK_DAILY } from './profile.js';
 import { avatarEditor, SALON_TABS, CLOTHES_TABS, PET_TABS } from './editor.js';
 import { openTeethGame } from './dentist.js';
 import { landAt, LAND_DEFS, townCellAllowed } from './lands.js';
@@ -98,6 +98,7 @@ export class Game {
     this.rings = [];
     this.parked = [];
     this.rockets = [];
+    this.riding = null;
     this.pose = null;
     this.held = null;
     this.voice = new VoiceChat(this);
@@ -166,12 +167,28 @@ export class Game {
   }
 
   makeSnow() {
+    // Schneeflocken: die Bewegung rechnet die Grafikkarte, der Prozessor fasst sie nicht an
     const n = 1500;
-    const pos = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 90; pos[i * 3 + 1] = Math.random() * 40; pos[i * 3 + 2] = (Math.random() - 0.5) * 90; }
+    const seed = new Float32Array(n * 3);
+    for (let i = 0; i < seed.length; i++) seed[i] = Math.random();
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({ color: '#ffffff', size: 0.35, transparent: true, opacity: 0.9, depthWrite: false });
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    geo.setAttribute('seed', new THREE.BufferAttribute(seed, 3));
+    this.snowT = 0;
+    this.snowU = { uTime: { value: 0 }, uH: { value: 800 }, uProj: { value: 1 }, uSize: { value: 0.35 } };
+    const mat = new THREE.ShaderMaterial({
+      uniforms: this.snowU, transparent: true, depthWrite: false,
+      vertexShader: `attribute vec3 seed; uniform float uTime; uniform float uH; uniform float uProj; uniform float uSize;
+        void main() {
+          float y = mod(seed.y * 40.0 - uTime * 3.0, 40.0) - 5.0;
+          float x = (seed.x - 0.5) * 90.0 + sin(y * 0.5 + seed.z * 6.2832 + uTime * 0.4) * 0.4;
+          float z = (seed.z - 0.5) * 90.0;
+          vec4 mv = modelViewMatrix * vec4(x, y, z, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = uSize * uProj * uH * 0.5 / max(-mv.z, 0.1);
+        }`,
+      fragmentShader: `void main() { vec2 c = gl_PointCoord - 0.5; if (dot(c, c) > 0.25) discard; gl_FragColor = vec4(1.0, 1.0, 1.0, 0.9); }`,
+    });
     this.snow = new THREE.Points(geo, mat);
     this.snow.visible = false;
     this.snow.frustumCulled = false;
@@ -181,15 +198,11 @@ export class Game {
 
   updateSnow(dt) {
     if (!this.snow?.visible) return;
-    const a = this.snow.geometry.attributes.position;
+    this.snowT += dt;
+    this.snowU.uTime.value = this.snowT;
+    this.snowU.uH.value = this.renderer.domElement.height;
+    this.snowU.uProj.value = this.camera.projectionMatrix.elements[5];
     const c = this.camera.position;
-    for (let i = 0; i < a.count; i++) {
-      let y = a.getY(i) - dt * 3;
-      if (y < -5) y += 40;
-      a.setY(i, y);
-      a.setX(i, a.getX(i) + Math.sin(y * 0.5 + i) * dt * 0.4);
-    }
-    a.needsUpdate = true;
     this.snow.position.set(c.x, c.y - 15, c.z);
   }
 
@@ -409,14 +422,10 @@ export class Game {
     if (!this.adv) return;
     const p = this.body.p;
     const seed = hourIndex(Date.now() + this.timeOffset) * 10 + this.adv.id;
-    if (seed !== this.adv.seed) {
-      // Neue Stunde: Haus umbauen, Spieler zum Eingang
-      this.notice('⏰ Die Stunde ist um – das Haus hat sich neu gebaut!', 3500);
-      this.removeChunk(this.adv.rec);
-      const a = makeAdventure(this.adv.id, seed);
-      this.adv = { id: this.adv.id, seed, rec: this.addChunk(a.parts), data: a };
-      this.teleport(a.spawn.entry[0], a.spawn.entry[1] + 0.05, a.spawn.entry[2], a.spawn.face);
-      return;
+    if (seed !== this.adv.seed && !this.adv.stale) {
+      // Neue Stunde: das Haus wird erst beim nächsten Betreten umgebaut, nicht während man darin ist
+      this.adv.stale = true;
+      this.notice('⏰ Die Stunde ist um – beim nächsten Besuch ist das Haus neu!', 3500);
     }
     // Knopf drücken: nahe stehen und Taste E / Knopf "Drücken" nutzen
     const btn = this.adv.rec.acts.find(a => a.part.act === 'button' && Math.hypot(a.part.x - p.x, a.part.z - p.z) < 2);
@@ -668,9 +677,11 @@ export class Game {
     const r = {
       id: p.id, name: p.name, char, pos, target: pos.clone(), rot: s[3] || 0, targetRot: s[3] || 0, anim: ANIMS[s[4]] || 'idle',
       bot: !!p.bot, staticBot: !!p.staticBot, role: p.role, chair: p.chair, veh: 0, vehModel: null, carriedBy: null, speed: 0,
+      rideOf: p.rideOf ?? null,
     };
     this.remotes.set(p.id, r);
     this.setRemoteVeh(r, s[5] || 0);
+    if (r.rideOf != null) this.setRide(r, r.rideOf);
     this.syncPet(p.id, p.avatar);
     this.scores.set(p.id, p.score || 0);
     if (p.id === this.it) char.setIt(true);
@@ -688,6 +699,50 @@ export class Game {
     if (this.carrying === id) { this.carrying = null; this.char.holding = this.held != null; }
     if (!r.bot) this.notice(`${r.name} ist gegangen`);
     this.renderScores();
+  }
+
+  // Beifahrer sitzt rechts neben dem Fahrer
+  rideOffset(d) {
+    const c = Math.cos(d.rot), s = Math.sin(d.rot);
+    return { x: d.pos.x + 0.55 * c, y: d.pos.y, z: d.pos.z - 0.55 * s };
+  }
+
+  rideSeat(d) {
+    const v = d.veh ? vehDecode(d.veh) : null;
+    return v && VEHICLES[v.type] ? SEATS[VEHICLES[v.type].key] : null;
+  }
+
+  setRide(r, driverId) {
+    r.rideOf = driverId;
+    const d = this.remotes.get(driverId);
+    const seat = d && this.rideSeat(d);
+    if (seat) { r.char.seatY = seat.pos[1]; r.char.seatZ = seat.pos[2]; }
+  }
+
+  onRide({ id, by }) {
+    if (id === this.myId) {
+      if (by == null) this.endRideLocal();
+      else { this.riding = by; this.notice('🪑 Du fährst mit – viel Spass!', 2500); sfx('magic'); }
+      return;
+    }
+    const r = this.remotes.get(id);
+    if (!r) return;
+    if (by == null) {
+      r.rideOf = null;
+      r.char.seatY = 0; r.char.seatZ = 0;
+    } else this.setRide(r, by);
+  }
+
+  endRideLocal() {
+    if (this.riding == null) return;
+    this.riding = null;
+    this.char.seatY = 0; this.char.seatZ = 0;
+    this.body.v.x = this.body.v.y = this.body.v.z = 0;
+  }
+
+  leaveRide() {
+    this.net.send({ t: 'unride' });
+    this.endRideLocal();
   }
 
   setRemoteVeh(r, code) {
@@ -708,6 +763,7 @@ export class Game {
   onMessage(m) {
     switch (m.t) {
       case 'join': this.addRemote(m.player); break;
+      case 'ride': this.onRide(m); break;
       case 'leave': this.removeRemote(m.id); break;
       case 'st':
         for (const [id, x, y, z, r, a, v] of m.l) {
@@ -904,6 +960,20 @@ export class Game {
       spot: this.findTopSpot(lx, lz, top, fx, fz),
     };
     this.notice('🧗 Hoch geht’s!', 1500);
+  }
+
+  nearestRideable() {
+    const p = this.body.p;
+    let best = null, bd = 5;
+    for (const r of this.remotes.values()) {
+      if (r.bot || r.staticBot || !r.veh || r.rideOf != null) continue;
+      if ([...this.remotes.values()].some(x => x.rideOf === r.id)) continue;
+      const v = vehDecode(r.veh);
+      if (!v || !VEHICLES[v.type] || !['car', 'jeep', 'boat', 'speedboat'].includes(VEHICLES[v.type].key)) continue;
+      const d = Math.hypot(r.pos.x - p.x, r.pos.z - p.z);
+      if (d < bd) { bd = d; best = r; }
+    }
+    return best;
   }
 
   nearestLadder() {
@@ -1213,12 +1283,12 @@ export class Game {
       case 'treasure': this.openTreasure(a.part); break;
       case 'fireworks': this.net.send({ t: 'fireworks', x: a.part.x, z: a.part.z }); break;
       case 'brush':
-        openTeethGame({ title: '🪥 Zähne putzen', onDone: ok => { if (ok) { addStars(3); this.notice('✨ Strahlende Zähne! +3 ⭐'); this.char.say('😁✨'); } } });
+        openTeethGame({ title: '🪥 Zähne putzen', onDone: ok => { if (ok) { earnWork(3); this.notice('✨ Strahlende Zähne! +3 ⭐'); this.char.say('😁✨'); } } });
         break;
       case 'dentist': this.treatPatient(a.part.chair); break;
       case 'register': {
         sfx('coin');
-        addStars(2);
+        earnWork(2);
         this.char.say('Piep! 🛒');
         this.notice('🛒 Einkauf erledigt! ⭐ +2 Sterne');
         const bot = [...this.remotes.values()].find(r => r.staticBot && Math.hypot(r.pos.x - this.body.p.x, r.pos.z - this.body.p.z) < 6);
@@ -1227,6 +1297,10 @@ export class Game {
       }
       case 'job': {
         if (this.jobTimer > 0) { this.notice('💼 Du arbeitest schon!'); break; }
+        const wk = a.part.title || String(a.part.jobId ?? 0);
+        const wait = jobWait(wk);
+        if (wait > 0) { this.notice(`⏳ Hier gibt es in ${Math.ceil(wait / 60000)} Min. wieder Arbeit`, 2800); break; }
+        markJob(wk);
         const jt = a.part?.job || JOB_TASKS[a.part?.jobId ?? 0];
         this.jobTimer = jt.time;
         this.jobData = jt;
@@ -1278,7 +1352,7 @@ export class Game {
       if (dentist) dentist.char.say(l); else this.notice(l, 1500);
       const p = this.body.p;
       this.burst(new THREE.Vector3(p.x, p.y + 1.2, p.z - 0.6), ['#ffffff', '#e1f5fe'], 8, 3, true);
-      if (i === lines.length - 1) { addStars(3); this.char.say('😁✨'); sfx('goal'); }
+      if (i === lines.length - 1) { earnWork(3); this.char.say('😁✨'); sfx('goal'); }
       else sfx('click');
     }, i * 1600));
   }
@@ -1350,7 +1424,7 @@ export class Game {
 
   // ---------- Fahrzeuge ----------
   enterVehicle(type, color, part) {
-    if (this.driving || this.carriedBy != null) return;
+    if (this.driving || this.carriedBy != null || this.riding != null) return;
     if (this.held != null) this.dropItem();
     if (this.carrying != null) this.net.send({ t: 'putdown' });
     const V = VEHICLES[type];
@@ -1515,7 +1589,9 @@ export class Game {
   updateActions() {
     const el = $('actions');
     const list = [];
-    if (this.driving) {
+    if (this.riding != null) {
+      list.push(['🚪 Absteigen', () => this.leaveRide()]);
+    } else if (this.driving) {
       list.push(['🚪 Aussteigen', () => this.exitVehicle()]);
       list.push(['📯 Hupen', () => { sfx('horn'); this.char.say('Tuuut! 📯'); }]);
     } else if (this.carriedBy != null) {
@@ -1543,6 +1619,8 @@ export class Game {
       }
       const myPet = this.pets.get(this.myId);
       if (myPet && this.held == null && Math.hypot(myPet.pos.x - this.body.p.x, myPet.pos.z - this.body.p.z) < 3 && list.length < 2) list.push(['❤️ Mein Tier streicheln', () => this.petMyPet()]);
+      const ride = !this.driving && this.nearestRideable();
+      if (ride) list.unshift([`🪑 ${ride.name} mitfahren`, () => this.net.send({ t: 'ride', id: ride.id })]);
       const lad = !this.body.climbing && !this.autoClimb && this.nearestLadder();
       if (lad) list.unshift(['🧗 Hochklettern', () => this.startClimb(lad)]);
       if (list.length < 2 && this.held == null) {
@@ -1629,7 +1707,7 @@ export class Game {
   }
 
   sendState(now) {
-    if (now - this.lastSend < 66) return;
+    if (now - this.lastSend < 66 || this.riding != null) return;
     const p = this.body.p;
     const a = ANIMS.indexOf(this.anim);
     const veh = this.driving ? vehCode(this.driving.type, this.driving.color) : 0;
@@ -1891,6 +1969,23 @@ export class Game {
       return;
     }
 
+    // Mitfahren: man sitzt beim Fahrer und hat keine eigene Steuerung
+    if (this.riding != null) {
+      const d = this.remotes.get(this.riding);
+      if (!d) this.endRideLocal();
+      else {
+        const o = this.rideOffset(d);
+        p.x = o.x; p.y = o.y; p.z = o.z;
+        this.body.v.x = this.body.v.y = this.body.v.z = 0;
+        this.facing = d.rot;
+        this.anim = 'drive';
+        const seat = this.rideSeat(d);
+        if (seat) { this.char.seatY = seat.pos[1]; this.char.seatZ = seat.pos[2]; }
+        this.finishChar(dt, 0);
+        return;
+      }
+    }
+
     // Fahren
     if (this.driving) {
       const d = this.driving, V = VEHICLES[d.type];
@@ -1899,7 +1994,12 @@ export class Game {
       const turnF = clamp(Math.abs(d.speed) / 6, 0, 1) * Math.sign(d.speed || 1);
       this.facing -= mv.x * V.turn * dt * turnF;
       const f = d.speed / V.speed;
+      const px0 = this.body.p.x, pz0 = this.body.p.z;
       this.body.update(dt, Math.sin(this.facing) * f, Math.cos(this.facing) * f, false);
+      if (this.hitsOtherPlayer(V.half)) {
+        this.body.p.x = px0; this.body.p.z = pz0;
+        if (Math.abs(d.speed) > 2) { d.speed *= 0.2; sfx('bump'); }
+      }
       const actual = Math.hypot(this.body.v.x, this.body.v.z);
       if (Math.abs(d.speed) > 4 && actual < Math.abs(d.speed) * 0.25) {
         d.bump += dt;
@@ -1990,8 +2090,8 @@ export class Game {
       this.jobTimer -= dt;
       if (this.jobTimer <= 0) {
         const jt = this.jobData;
-        addStars(jt.stars);
-        this.notice(`${jt.emoji} Fertig! ⭐ +${jt.stars} Sterne verdient!`, 3000);
+        const got = earnWork(jt.stars);
+        this.notice(got ? `${jt.emoji} Fertig! ⭐ +${got} Sterne verdient!` : `${jt.emoji} Fertig! Heute hast du genug Arbeits-Sterne – morgen wieder!`, 3000);
         sfx('goal');
         this.burst(new THREE.Vector3(this.body.p.x, this.body.p.y + 1.5, this.body.p.z), ['#ffd54f', '#fff59d'], 20, 6);
         this.jobData = null;
@@ -2030,6 +2130,16 @@ export class Game {
     this.finishChar(dt, sp);
   }
 
+  hitsOtherPlayer(half) {
+    const p = this.body.p;
+    for (const r of this.remotes.values()) {
+      if (r.rideOf != null || !r.char.root.visible) continue;
+      if (Math.abs(r.pos.y - p.y) > 1.5) continue;
+      if (Math.hypot(r.pos.x - p.x, r.pos.z - p.z) < half + 0.5) return true;
+    }
+    return false;
+  }
+
   finishChar(dt, sp) {
     const p = this.body.p;
     this.char.root.position.set(p.x, p.y, p.z);
@@ -2040,6 +2150,17 @@ export class Game {
   updateRemotes(dt) {
     const k = 1 - Math.exp(-dt * 12);
     for (const r of this.remotes.values()) {
+      if (r.rideOf != null) {
+        const d = this.remotes.get(r.rideOf);
+        if (!d) continue;
+        const o = this.rideOffset(d);
+        r.pos.set(o.x, o.y, o.z);
+        r.rot = d.rot;
+        r.char.root.position.copy(r.pos);
+        r.char.root.rotation.y = r.rot;
+        if (r.char.root.visible) r.char.update(dt, 'drive', 0);
+        continue;
+      }
       const before = r.pos.clone();
       if (r.carriedBy != null) {
         const cp = this.carryPos(r.carriedBy);
@@ -2058,6 +2179,9 @@ export class Game {
       r.speed += (sp - r.speed) * k;
       if (!r.char.root.visible) continue;
       if (r.vehModel) spinWheels(r.vehModel, r.speed, dt);
+      const pp = this.body.p;
+      const far = Math.abs(r.pos.x - pp.x) + Math.abs(r.pos.z - pp.z) > 45;
+      if (far && (((this.quality?.frame || 0) + r.id) % 4)) continue;
       r.char.update(dt, r.anim, r.speed);
     }
   }
@@ -2128,6 +2252,35 @@ export class Game {
     }
   }
 
+  // Übersicht: Mini-Karte mit Kompass (N zeigt immer nach Norden, oben ist die Blickrichtung) und Mitspielern
+  drawMinimap() {
+    const cv = $('minimap');
+    if (!cv || cv.hidden) return;
+    const g = cv.getContext('2d');
+    const S = 200, C = 100, R = 94, RANGE = 60;
+    const p = this.body.p, f = this.facing, sf = Math.sin(f), cf = Math.cos(f);
+    const k = R / RANGE;
+    g.clearRect(0, 0, cv.width, cv.height);
+    g.fillStyle = 'rgba(20,20,40,0.45)';
+    g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.stroke();
+    for (const r of this.remotes.values()) {
+      const dx = r.pos.x - p.x, dz = r.pos.z - p.z;
+      if (Math.hypot(dx, dz) > RANGE) continue;
+      const x = C + (dx * cf - dz * sf) * k, y = C - (dx * sf + dz * cf) * k;
+      g.fillStyle = r.bot || r.staticBot ? '#bdbdbd' : '#ffd54f';
+      g.beginPath(); g.arc(x, y, r.bot || r.staticBot ? 3.5 : 6, 0, Math.PI * 2); g.fill();
+    }
+    g.fillStyle = '#ffd54f';
+    g.font = 'bold 26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('N', C + sf * R * 0.8, C + cf * R * 0.8);
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.moveTo(C, C - 11); g.lineTo(C - 8, C + 8); g.lineTo(C + 8, C + 8); g.closePath(); g.fill();
+    const used = WORK_DAILY - workLeft();
+    g.fillStyle = '#ffffff'; g.font = 'bold 17px sans-serif';
+    g.fillText(`⭐ Arbeit heute: ${used}/${WORK_DAILY}`, C, S + 11);
+  }
+
   updateLOD() {
     const p = this.body.p;
     for (const v of this.parked) v.visible = Math.abs(v.position.x - p.x) < 90 && Math.abs(v.position.z - p.z) < 90;
@@ -2182,6 +2335,19 @@ export class Game {
   }
 
   // Kamera, die nicht durch Wände schaut
+  // Die Schatten-Kamera wandert nur in ganzen Bildpunkten mit, sonst flimmern die Kanten
+  snapSun(p) {
+    const sun = this.sun, T = 110 / sun.shadow.mapSize.x;
+    const eye = new THREE.Vector3(40, 80, 25);
+    const look = new THREE.Matrix4().lookAt(eye, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0));
+    const v = new THREE.Vector3(p.x, p.y, p.z).applyMatrix4(look.clone().invert());
+    v.x = Math.round(v.x / T) * T;
+    v.y = Math.round(v.y / T) * T;
+    const world = v.applyMatrix4(look);
+    sun.target.position.copy(world);
+    sun.position.copy(world).add(eye);
+  }
+
   updateCamera(dt) {
     const p = this.body.p;
     // Selfie: Kamera steht vor der Figur und schaut sie an
@@ -2209,8 +2375,7 @@ export class Game {
     const D = this.cam.cur;
     this.camera.position.set(this.camTarget.x + dir.x * D, this.camTarget.y + dir.y * D, this.camTarget.z + dir.z * D);
     this.camera.lookAt(this.camTarget);
-    this.sun.position.set(p.x + 40, p.y + 80, p.z + 25);
-    this.sun.target.position.set(p.x, p.y, p.z);
+    this.snapSun(p);
     this.sky.position.copy(this.camera.position);
   }
 
@@ -2243,6 +2408,7 @@ export class Game {
       this.updateActions();
       this.updateLOD();
       this.updateLand();
+      this.drawMinimap();
     }
     this.sendState(now);
     this.updateRockets(dt);
