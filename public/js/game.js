@@ -615,9 +615,10 @@ export class Game {
     if (g === 'tag') ids.sort((a, b) => sc(a) - sc(b));
     const head = document.createElement('div');
     head.className = 'sb-head';
-    head.textContent = `👥 ${ids.length} Spieler`;
+    head.textContent = `👥 ${ids.length} Spieler ${this.scoreOpen ? '▴' : '▾'}`;
+    head.onclick = () => { this.scoreOpen = !this.scoreOpen; this.renderScores(); };
     el.append(head);
-    for (const id of ids.slice(0, 8)) {
+    for (const id of this.scoreOpen ? ids.slice(0, 8) : []) {
       const row = document.createElement('div');
       row.className = 'sb-row' + (id === this.myId ? ' me' : '') + (id === this.it ? ' it' : '');
       const n = document.createElement('span');
@@ -701,6 +702,12 @@ export class Game {
     this.renderScores();
   }
 
+  // Der Fahrer kann auch selbst der Zielpunkt sein (dann steht er im Fahrzeug, nicht als Remote)
+  driverView(id) {
+    if (id === this.myId) return this.driving ? { pos: this.body.p, rot: this.facing, veh: vehCode(this.driving.type, this.driving.color) } : null;
+    return this.remotes.get(id) || null;
+  }
+
   // Beifahrer sitzt rechts neben dem Fahrer
   rideOffset(d) {
     const c = Math.cos(d.rot), s = Math.sin(d.rot);
@@ -714,7 +721,7 @@ export class Game {
 
   setRide(r, driverId) {
     r.rideOf = driverId;
-    const d = this.remotes.get(driverId);
+    const d = this.driverView(driverId);
     const seat = d && this.rideSeat(d);
     if (seat) { r.char.seatY = seat.pos[1]; r.char.seatZ = seat.pos[2]; }
   }
@@ -1617,8 +1624,6 @@ export class Game {
           if (it.cat === 'pet') list.push(['❤️ Streicheln', () => this.petItem(it)]);
         }
       }
-      const myPet = this.pets.get(this.myId);
-      if (myPet && this.held == null && Math.hypot(myPet.pos.x - this.body.p.x, myPet.pos.z - this.body.p.z) < 3 && list.length < 2) list.push(['❤️ Mein Tier streicheln', () => this.petMyPet()]);
       const ride = !this.driving && this.nearestRideable();
       if (ride) list.unshift([`🪑 ${ride.name} mitfahren`, () => this.net.send({ t: 'ride', id: ride.id })]);
       const lad = !this.body.climbing && !this.autoClimb && this.nearestLadder();
@@ -2107,7 +2112,7 @@ export class Game {
     if (moving) {
       this.facing = lerpAngle(this.facing, Math.atan2(wx, wz), 1 - Math.exp(-dt * 14));
       // Kamera geht beim Vorwärtslaufen hinter die Figur (nur Seitwärts dreht sie nicht, sonst läuft man im Kreis)
-      if (mv.y > 0.2 && performance.now() - this.cam.lastDrag > 800) this.cam.yaw = lerpAngle(this.cam.yaw, this.facing + Math.PI, 1 - Math.exp(-dt * 2.5 * mv.y));
+      if (performance.now() - this.cam.lastDrag > 700) this.cam.yaw = lerpAngle(this.cam.yaw, this.facing + Math.PI, 1 - Math.exp(-dt * 4));
       this.emote = null;
       if (this.gameKey === 'obby' && !this.obbyStart && !this.finished) this.obbyStart = performance.now();
     }
@@ -2151,7 +2156,7 @@ export class Game {
     const k = 1 - Math.exp(-dt * 12);
     for (const r of this.remotes.values()) {
       if (r.rideOf != null) {
-        const d = this.remotes.get(r.rideOf);
+        const d = this.driverView(r.rideOf);
         if (!d) continue;
         const o = this.rideOffset(d);
         r.pos.set(o.x, o.y, o.z);
@@ -2250,35 +2255,6 @@ export class Game {
       if (!on) continue;
       for (const { mesh, kind } of this.toggleMeshes.get(key) || []) if (kind === 'tv') mesh.material.emissive.setHSL((t * 0.15) % 1, 0.7, 0.55);
     }
-  }
-
-  // Übersicht: Mini-Karte mit Kompass (N zeigt immer nach Norden, oben ist die Blickrichtung) und Mitspielern
-  drawMinimap() {
-    const cv = $('minimap');
-    if (!cv || cv.hidden) return;
-    const g = cv.getContext('2d');
-    const S = 200, C = 100, R = 94, RANGE = 60;
-    const p = this.body.p, f = this.facing, sf = Math.sin(f), cf = Math.cos(f);
-    const k = R / RANGE;
-    g.clearRect(0, 0, cv.width, cv.height);
-    g.fillStyle = 'rgba(20,20,40,0.45)';
-    g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.stroke();
-    for (const r of this.remotes.values()) {
-      const dx = r.pos.x - p.x, dz = r.pos.z - p.z;
-      if (Math.hypot(dx, dz) > RANGE) continue;
-      const x = C + (dx * cf - dz * sf) * k, y = C - (dx * sf + dz * cf) * k;
-      g.fillStyle = r.bot || r.staticBot ? '#bdbdbd' : '#ffd54f';
-      g.beginPath(); g.arc(x, y, r.bot || r.staticBot ? 3.5 : 6, 0, Math.PI * 2); g.fill();
-    }
-    g.fillStyle = '#ffd54f';
-    g.font = 'bold 26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('N', C + sf * R * 0.8, C + cf * R * 0.8);
-    g.fillStyle = '#ffffff';
-    g.beginPath(); g.moveTo(C, C - 11); g.lineTo(C - 8, C + 8); g.lineTo(C + 8, C + 8); g.closePath(); g.fill();
-    const used = WORK_DAILY - workLeft();
-    g.fillStyle = '#ffffff'; g.font = 'bold 17px sans-serif';
-    g.fillText(`⭐ Arbeit heute: ${used}/${WORK_DAILY}`, C, S + 11);
   }
 
   updateLOD() {
@@ -2408,7 +2384,6 @@ export class Game {
       this.updateActions();
       this.updateLOD();
       this.updateLand();
-      this.drawMinimap();
     }
     this.sendState(now);
     this.updateRockets(dt);
