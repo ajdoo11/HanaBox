@@ -99,6 +99,7 @@ export class Game {
     this.parked = [];
     this.rockets = [];
     this.riding = null;
+    this.petMenu = false;
     try { this.friends = new Set(JSON.parse(localStorage.getItem('hb_friends') || '[]')); } catch { this.friends = new Set(); }
     this.pose = null;
     this.held = null;
@@ -1641,7 +1642,7 @@ export class Game {
         }
       }
       const myPet = this.pets.get(this.myId);
-      if (myPet && this.held == null && list.length < 3) list.push([myPet.rest ? '🐾 Tier zurückrufen' : '🏠 Tier hier ablegen', () => this.togglePetRest()]);
+      if (myPet && this.petMenu && this.held == null && list.length < 3) list.push([myPet.rest ? '🐾 Tier zurückrufen' : '🏠 Tier hier ablegen', () => this.togglePetRest()]);
       const ride = !this.driving && this.nearestRideable();
       if (ride) list.unshift([`🪑 ${ride.name} mitfahren`, () => this.net.send({ t: 'ride', id: ride.id })]);
       const lad = !this.body.climbing && !this.autoClimb && this.nearestLadder();
@@ -2324,6 +2325,14 @@ export class Game {
   handleTaps() {
     const taps = this.input.consumeTaps();
     if (!taps.length) return;
+    // Tier antippen öffnet sein Menü; ein Tipp daneben schliesst es
+    const myPet = this.pets.get(this.myId);
+    if (myPet && myPet.mesh.visible) {
+      const t = taps[taps.length - 1];
+      this.raycaster.setFromCamera(new THREE.Vector2((t.x / innerWidth) * 2 - 1, -(t.y / innerHeight) * 2 + 1), this.camera);
+      if (this.raycaster.intersectObject(myPet.mesh, true).length) { this.petMenu = true; sfx('click'); return; }
+      this.petMenu = false;
+    }
     if (this.items.size && (!this.build || this.buildMode === 'play')) {
       const meshes = [...this.items.values()].filter(i => i.holder == null).map(i => i.mesh);
       for (const tap of taps) {

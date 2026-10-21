@@ -96,10 +96,9 @@ export function makeTown() {
 
   // ---------- Skulpturen der Kinder am Stadtplatz ----------
   {
-    const statue = (x, z, kid, title) => {
+    const statue = (x, z, kid) => {
       const a = kid.set;
       box(x, 0, z, 3.6, 1.2, 3.6, '#cfd8dc', { tex: 'stone' });
-      sign(title, x, 0.6, z + 1.85, 3.2, 0.9, 'z+', '#fff8e1', '#4e342e', false);
       box(x - 0.45, 1.2, z, 0.75, 1.8, 0.8, a.pants, { tex: 'stone' });
       box(x + 0.45, 1.2, z, 0.75, 1.8, 0.8, a.pants, { tex: 'stone' });
       box(x, 3.0, z, 2.0, 1.9, 1.0, a.shirt, { tex: 'stone' });
@@ -108,9 +107,9 @@ export function makeTown() {
       box(x, 4.9, z, 1.4, 1.4, 1.2, a.skin, { tex: 'stone' });
       deco(x, 5.65, z - 0.02, 1.6, 0.55, 1.5, a.hairColor, { tex: 'stone' });
     };
-    statue(-9, 17, KIDS[0], '👧 Mint');
-    statue(0, 19, KIDS[1], '👧 Pink');
-    statue(9, 17, KIDS[2], '👦 Türkis');
+    statue(-9, 17, KIDS[0]);
+    statue(0, 19, KIDS[1]);
+    statue(9, 17, KIDS[2]);
   }
 
   // ---------- Wohnhäuser ----------
