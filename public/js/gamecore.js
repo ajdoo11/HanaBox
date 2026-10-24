@@ -566,10 +566,16 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
       }
       case 'grab': {
         const t = room.entity(m.id);
-        if (!t || t === p || t.staticBot || t.grabbable === false) return;
-        if (p.carrying != null || p.carriedBy != null || t.carrying != null || t.carriedBy != null) return;
-        if (p.state[5] || t.state[5]) return;
-        if (Math.hypot(t.state[0] - p.state[0], t.state[2] - p.state[2]) > 4 || Math.abs(t.state[1] - p.state[1]) > 3) return;
+        if (!t || t === p || t.staticBot) return;
+        // Nicht still scheitern: immer sagen, warum es nicht geht
+        const no = text => send(p.ws, { t: 'notice', text });
+        if (t.grabbable === false) return no(`🙅 ${t.name} möchte nicht hochgehoben werden (Einstellung im ☰-Menü).`);
+        if (p.carrying != null || p.carriedBy != null) return;
+        if (t.carrying != null || t.carriedBy != null) return no(`${t.name} trägt gerade jemanden oder wird getragen.`);
+        if (p.state[5]) return no('🚗 Steig zuerst aus.');
+        if (t.state[5]) return no(`🚗 ${t.name} fährt gerade.`);
+        // Positionen kommen über das Internet etwas verspätet an: grosszügig messen
+        if (Math.hypot(t.state[0] - p.state[0], t.state[2] - p.state[2]) > 6 || Math.abs(t.state[1] - p.state[1]) > 4) return no(`Geh noch näher zu ${t.name} hin 🙂`);
         p.carrying = t.id;
         t.carriedBy = p.id;
         if (t.bot) { t.follow = null; t.path = []; t.veh = 0; }
