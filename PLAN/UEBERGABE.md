@@ -38,12 +38,13 @@ Diese Datei ist für die nächste Sitzung. Lies sie zuerst, dann `PLAN/Naechste-
 - Licht: neutrale Sonne, violette Schattenseiten; Tonemapping Neutral (statt ACES, das hat die Farben ausgewaschen).
 - Figuren und Fahrzeuge stark abgerundet, Figuren mit runden Händen. Texturen ruhig/flach.
 - Oberfläche: Schrift Fredoka (Google Fonts), dicke dunkle Ränder (`--ink`), Himmel-Hintergrund im Menü, gelbes Handy.
+- Gebäude/Bäume (Teil 3): `geo.js` `softBox()` schrägt die Kanten mittelgrosser Klötze ab (nur Darstellung, Physik unverändert); gemischte Gruppen werden ohne Index zusammengefasst. `kit.js`: Bäume mit Wolkenkrone + heller Spitze, Tannen in 3 Stufen, Palmen mit runden Wedeln, Büsche doppelt; Häuser mit Rundbogentür, Fensterläden und Band in Dachfarbe. Kugeln/Zylinder etwas feiner. Auf dem PC etwa 20 % mehr Zeichenzeit.
 - Stil ist eigenständig: keine Simpsons-Figuren, keine gelbe Haut, kein Logo.
 
 ## 4. Offen (Reihenfolge, siehe PLAN/Naechste-Schritte.md)
 1. ~~Rucksack-Shop~~ erledigt (noch auf Render deployen).
 2. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler gebaut, Preis 40–150 Sterne.
-3. Großes Redesign: HAT VORRANG (Wunsch vom 24.10.). Teil 1+2 erledigt (siehe unten «Neue Grafik»). Offen: Gebäude/Bäume runder und bunter, Tiere-Modelle, Leistungstest auf echtem iPad/Handy.
+3. Großes Redesign: HAT VORRANG (Wunsch vom 24.10.). Teil 1+2 erledigt (siehe unten «Neue Grafik»). Teil 3 (Gebäude/Bäume) erledigt. Offen: Tier-Modelle, Leistungstest auf echtem iPad/Handy.
 4. Bus: Mitfahrende anderer Spieler sind noch nicht sichtbar; Bus-Aussehen am Bildschirm bestätigen.
 5. Sterne-Deckel und Arbeitswartezeit sind nur im Gerät. Auf Wunsch serverseitig machen. Gilt auch für Rucksack-Käufe (Server prüft Besitz nicht).
 

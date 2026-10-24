@@ -34,30 +34,39 @@ export function createKit({ parts, items = [], pois = [], seed = 1 }) {
     deco(x + w / 2 - 0.4, 0, z, 0.25, 3.4, 0.25, '#795548');
     sign(text, x, 3.6, z, w, 1.4, face, bg, fg);
   };
-  const tree = (x, z, s = 1, y0 = 0, greens = ['#66bb6a', '#4caf50', '#81c784', '#43a047']) => {
-    box(x, y0, z, 0.8 * s, 3.2 * s, 0.8 * s, '#8d6e63', { shape: 'cyl', tex: 'wood' });
+  // Bäume im Trickfilm-Stil: runde Wolkenkronen, oben eine hellere Kugel als Lichtkante, leicht schiefer Stamm
+  const GREENS = ['#4cbb2c', '#5ccb3c', '#3fae35', '#6fd13f'];
+  const light = c => { const n = parseInt(c.slice(1), 16); const f = v => Math.min(255, Math.round(v + (255 - v) * 0.28)); return '#' + ((f(n >> 16) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).padStart(6, '0'); };
+  const tree = (x, z, s = 1, y0 = 0, greens = GREENS) => {
+    box(x, y0, z, 0.8 * s, 3.2 * s, 0.8 * s, '#8d5a3b', { shape: 'trunk', rz: (r() - 0.5) * 0.12 });
     const g = greens[Math.floor(r() * greens.length)];
-    deco(x, y0 + 2.6 * s, z, 4.2 * s, 3.6 * s, 4.2 * s, g, { shape: 'sphere', tex: 'leaves' });
-    deco(x + 0.9 * s, y0 + 4.2 * s, z - 0.4 * s, 2.8 * s, 2.6 * s, 2.8 * s, g, { shape: 'sphere', tex: 'leaves' });
-    deco(x - 0.8 * s, y0 + 3.9 * s, z + 0.6 * s, 2.6 * s, 2.4 * s, 2.6 * s, g, { shape: 'sphere', tex: 'leaves' });
+    deco(x, y0 + 2.4 * s, z, 4.4 * s, 3.4 * s, 4.4 * s, g, { shape: 'sphere' });
+    deco(x + 1.2 * s, y0 + 3.3 * s, z - 0.3 * s, 2.8 * s, 2.6 * s, 2.8 * s, g, { shape: 'sphere' });
+    deco(x - 1.1 * s, y0 + 3.2 * s, z + 0.6 * s, 2.7 * s, 2.5 * s, 2.7 * s, g, { shape: 'sphere' });
+    deco(x + 0.1 * s, y0 + 4.4 * s, z + 0.1 * s, 2.7 * s, 2.3 * s, 2.7 * s, light(g), { shape: 'sphere' });
   };
   const pine = (x, z, s = 1, snow = false) => {
-    box(x, 0, z, 0.6 * s, 2 * s, 0.6 * s, '#6d4c41', { shape: 'cyl' });
-    deco(x, 1.5 * s, z, 3.6 * s, 3 * s, 3.6 * s, '#2e7d32', { shape: 'cone' });
-    deco(x, 3.4 * s, z, 2.8 * s, 2.6 * s, 2.8 * s, '#388e3c', { shape: 'cone' });
-    if (snow) { deco(x, 3.0 * s, z, 2.4 * s, 0.6 * s, 2.4 * s, '#ffffff', { shape: 'cone' }); deco(x, 5.2 * s, z, 1.2 * s, 0.9 * s, 1.2 * s, '#ffffff', { shape: 'cone' }); }
+    box(x, 0, z, 0.6 * s, 2 * s, 0.6 * s, '#7a4a2e', { shape: 'trunk' });
+    const tiers = [[1.3, 3.8, 2.6, '#2f9e44'], [2.9, 3.0, 2.3, '#37b24d'], [4.3, 2.1, 1.9, '#51cf66']];
+    for (const [y, w, h, c] of tiers) {
+      deco(x, y * s, z, w * s, h * s, w * s, c, { shape: 'cone' });
+      if (snow) deco(x, (y + h * 0.55) * s, z, w * 0.62 * s, h * 0.45 * s, w * 0.62 * s, '#ffffff', { shape: 'cone' });
+    }
   };
   const palm = (x, z, s = 1) => {
-    for (let i = 0; i < 5; i++) box(x + i * 0.12 * s, i * 1.4 * s, z, 0.7 * s, 1.45 * s, 0.7 * s, '#a1887f', { shape: 'cyl', tex: 'wood' });
+    for (let i = 0; i < 5; i++) box(x + i * 0.12 * s, i * 1.4 * s, z, 0.7 * s, 1.45 * s, 0.7 * s, i % 2 ? '#b07a52' : '#c48b5f', { shape: 'trunk' });
     const tx = x + 0.6 * s, ty = 7 * s;
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      deco(tx + Math.cos(a) * 1.6 * s, ty - 0.3 * s, z + Math.sin(a) * 1.6 * s, 3.6 * s, 0.25 * s, 1.1 * s, '#43a047', { ry: -a, rz: -0.25 });
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      deco(tx + Math.cos(a) * 1.6 * s, ty - 0.3 * s, z + Math.sin(a) * 1.6 * s, 3.8 * s, 0.35 * s, 1.3 * s, i % 2 ? '#4cbb2c' : '#3fae35', { shape: 'sphere', ry: -a, rz: -0.3 });
     }
-    deco(tx, ty - 0.6 * s, z, 0.5 * s, 0.5 * s, 0.5 * s, '#6d4c41', { shape: 'sphere' });
-    deco(tx + 0.4 * s, ty - 0.7 * s, z + 0.3 * s, 0.5 * s, 0.5 * s, 0.5 * s, '#6d4c41', { shape: 'sphere' });
+    deco(tx, ty - 0.6 * s, z, 0.55 * s, 0.55 * s, 0.55 * s, '#6d4c41', { shape: 'sphere' });
+    deco(tx + 0.4 * s, ty - 0.7 * s, z + 0.3 * s, 0.55 * s, 0.55 * s, 0.55 * s, '#6d4c41', { shape: 'sphere' });
   };
-  const bush = (x, z, s = 1, c = '#66bb6a') => deco(x, 0, z, 1.8 * s, 1.4 * s, 1.8 * s, c, { shape: 'sphere', tex: 'leaves' });
+  const bush = (x, z, s = 1, c = '#5ccb3c') => {
+    deco(x, 0, z, 1.8 * s, 1.4 * s, 1.8 * s, c, { shape: 'sphere' });
+    deco(x + 0.3 * s, 0.6 * s, z + 0.1 * s, 1.0 * s, 0.9 * s, 1.0 * s, light(c), { shape: 'sphere' });
+  };
   const flowers = (x, z, w, d, n = 10, fl = ['#f06292', '#fff176', '#ba68c8', '#ff8a65', '#ffffff', '#64b5f6']) => {
     deco(x, 0, z, w, 0.25, d, '#8d6e63', { tex: 'sand' });
     for (let i = 0; i < n; i++) {
@@ -138,6 +147,9 @@ export function createKit({ parts, items = [], pois = [], seed = 1 }) {
     const [fx, fz] = DIR[door];
     const front = { x: x + fx * (w / 2), z: z + fz * (d / 2) };
     deco(front.x + fx * 0.06, 0, front.z + fz * 0.06, fx ? 0.15 : 2.6, 3.6, fx ? 2.6 : 0.15, '#5d4037', { tex: 'wood' });
+    // Trickfilm-Details: Rundbogen über der Tür, Band unter dem Dach in Dachfarbe
+    deco(front.x + fx * 0.06, 3.525, front.z + fz * 0.06, fx ? 1.6 : 2.6, 0.15, fx ? 2.6 : 1.6, '#5d4037', fx ? { shape: 'cyl', rz: Math.PI / 2, tex: 'wood' } : { shape: 'cyl', rx: Math.PI / 2, tex: 'wood' });
+    if (h > 4) deco(x, h - 0.6, z, w + 0.3, 0.6, d + 0.3, roofColor);
     deco(front.x + fx * 0.3, 0, front.z + fz * 0.3, fx ? 1.4 : 3.6, 0.12, fx ? 3.6 : 1.4, '#9e9e9e', { tex: 'stone' });
     const faces = [['s', 0, d / 2, w], ['n', 0, -d / 2, w], ['e', w / 2, 0, d], ['w', -w / 2, 0, d]];
     for (const [f, ox, oz, len] of faces) {
@@ -150,6 +162,7 @@ export function createKit({ parts, items = [], pois = [], seed = 1 }) {
           const wx = x + ox + (az ? t : 0) + ax * 0.05, wz = z + oz + (ax ? t : 0) + az * 0.05;
           deco(wx, y, wz, ax ? 0.12 : 1.9, 1.9, ax ? 1.9 : 0.12, '#ffffff', { noShadow: true });
           deco(wx + ax * 0.04, y + 0.15, wz + az * 0.04, ax ? 0.12 : 1.6, 1.6, ax ? 1.6 : 0.12, '#b3e5fc', { noShadow: true, emissive: '#4fc3f7', emissiveIntensity: 0.15 });
+          for (const sd of [-1, 1]) deco(wx + az * sd * 1.3 + ax * 0.02, y, wz + ax * sd * 1.3 + az * 0.02, ax ? 0.1 : 0.55, 1.9, ax ? 0.55 : 0.1, roofColor, { noShadow: true });
         }
       }
     }

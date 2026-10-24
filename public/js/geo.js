@@ -3,12 +3,15 @@
 import * as THREE from 'three';
 import { toonMat } from './toon.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { getTexture } from './textures.js';
 
+// Rundungen etwas feiner, damit die Umrisslinien keine Kanten-Facetten nachzeichnen
 const SHAPES = {
   box: () => new THREE.BoxGeometry(1, 1, 1),
-  sphere: p => (p.w > 1.2 ? new THREE.SphereGeometry(0.5, 12, 8) : new THREE.SphereGeometry(0.5, 8, 6)),
-  cyl: p => new THREE.CylinderGeometry(0.5, 0.5, 1, p.w > 4 ? 32 : p.w > 1 ? 16 : 8),
+  sphere: p => (p.w > 1.2 ? new THREE.SphereGeometry(0.5, 16, 10) : new THREE.SphereGeometry(0.5, 10, 7)),
+  cyl: p => new THREE.CylinderGeometry(0.5, 0.5, 1, p.w > 4 ? 32 : p.w > 1 ? 18 : 10),
+  trunk: () => new THREE.CylinderGeometry(0.34, 0.5, 1, 10),
   cone: () => new THREE.ConeGeometry(0.5, 1, 12),
   hemi: () => new THREE.SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
 };
@@ -42,14 +45,27 @@ function boxUV(g, scale) {
   }
 }
 
+// Trickfilm-Look: mittelgrosse Klötze (Häuser, Möbel, Mauern) bekommen weich abgeschrägte Kanten.
+// Nur für die Darstellung – die Physik rechnet weiter mit dem genauen Quader.
+const SOFT_SKIP = new Set(['ground', 'baseplate', 'water', 'glass', 'ladder', 'zone', 'portal', 'checkpoint']);
+function softBox(p) {
+  if (p.shape || SOFT_SKIP.has(p.k)) return null;
+  const w = p.w + (p.gw || 0), d = p.d + (p.gd || 0), min = Math.min(w, p.h, d);
+  if (min < 0.6 || Math.max(w, p.h, d) > 40) return null;
+  return new RoundedBoxGeometry(w, p.h, d, 1, Math.min(0.35, min * 0.2));
+}
+
 export function partGeometry(p, atOrigin = false) {
   let g;
   const lift = p.lift || 0;
   const q = atOrigin ? { ...p, x: 0, y: p.k === 'ramp' ? p.y : 0, z: 0 } : { ...p, y: p.y + lift };
   if (p.k === 'ramp') g = rampGeometry(lift && !atOrigin ? { ...q, y0: p.y0 + lift, y1: p.y1 + lift } : q);
   else {
-    g = SHAPES[p.shape || 'box'](p);
-    g.scale(p.w + (p.gw || 0), p.h, p.d + (p.gd || 0));
+    g = softBox(p);
+    if (!g) {
+      g = SHAPES[p.shape || 'box'](p);
+      g.scale(p.w + (p.gw || 0), p.h, p.d + (p.gd || 0));
+    }
     if (p.rx) g.rotateX(p.rx);
     if (p.rz) g.rotateZ(p.rz);
     if (p.ry) g.rotateY(p.ry);
@@ -169,6 +185,10 @@ export function buildStatic(parts, scene, disposables) {
   }
   const meshes = [];
   for (const [key, { p, geos }] of groups) {
+    // Abgerundete Klötze haben keinen Index: dann alle Teile der Gruppe ohne Index zusammenfassen
+    if (geos.some(g => !g.index) && geos.some(g => g.index)) {
+      for (let i = 0; i < geos.length; i++) if (geos[i].index) { const n = geos[i].toNonIndexed(); geos[i].dispose(); geos[i] = n; }
+    }
     const merged = mergeGeometries(geos, false);
     for (const g of geos) g.dispose();
     if (!merged) continue;
