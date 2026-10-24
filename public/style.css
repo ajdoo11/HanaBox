@@ -446,3 +446,10 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .fp-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); }
 .fp-dot.on, .fp-floor.on { box-shadow: 0 0 0 3px var(--cherry); }
 .fp-floor { padding: 6px 10px; border-radius: 12px; border: 2px solid var(--ink); font-weight: 800; font-size: 13px; }
+/* Umziehen: Menü an der Seite (quer) bzw. unten (hoch), die Figur steht daneben im Bild */
+.avatar-panel.dressing { top: 6%; left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; width: min(460px, 46vw); max-height: 86vh; }
+@media (orientation: portrait) {
+  .avatar-panel.dressing { top: auto; bottom: 10px; left: 50%; right: auto; transform: translateX(-50%); width: 94vw; max-height: 50vh; }
+}
+#hud.dressing .notice { top: 13%; left: 27%; max-width: 46vw; }
+@media (orientation: portrait) { #hud.dressing .notice { top: 9%; left: 50%; max-width: 90vw; } }

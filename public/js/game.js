@@ -1468,9 +1468,48 @@ export class Game {
     if (first) ed.show(first);
     panel.querySelector('.close').onclick = () => {
       panel.hidden = true;
+      this.endDressing();
       if (this.pose && this.pose.type === 'sit') this.standUp();
     };
     panel.hidden = false;
+    this.startDressing();
+  }
+
+  // Spiegel-Ansicht beim Umziehen: Kamera vor der Figur, Menü an der Seite, damit man sich sieht
+  startDressing() {
+    const p = this.body.p;
+    // In 8 Richtungen schauen, wo freie Sicht auf die Figur ist (auch Deko wie Kleiderständer zählt)
+    const blockers = [];
+    this.scene.traverseVisible(o => { if (o.isMesh && !o.isInstancedMesh && o.material && !o.material.transparent) blockers.push(o); });
+    const mine = new Set(); this.char.root.traverse(o => mine.add(o));
+    const ray = new THREE.Raycaster(); ray.camera = this.camera; ray.far = 6;
+    let best = null;
+    for (let k = 0; k < 8; k++) {
+      const dir = this.facing + k * Math.PI / 4;
+      const v = new THREE.Vector3(Math.sin(dir), 0.12, Math.cos(dir)).normalize();
+      let free = 6;
+      // Sichtlinien in der Mitte und auf Schulterbreite, unten/Mitte/Kopf
+      for (const h of [0.7, 1.5, 2.3]) for (const side of [-0.9, 0, 0.9]) {
+        ray.set(new THREE.Vector3(p.x + Math.cos(dir) * side, p.y + h, p.z - Math.sin(dir) * side), v);
+        const hit = ray.intersectObjects(blockers, false).find(x => !mine.has(x.object) && x.distance > 0.6);
+        if (hit) free = Math.min(free, hit.distance);
+      }
+      if (!best || free > best.free + 0.3) best = { dir, free };
+    }
+    this.dressing = { dir: best.dir, dist: Math.max(2.2, Math.min(4.6, best.free - 0.5)) };
+    // Wer sitzt (Friseur), bleibt sitzen; sonst dreht sich die Figur zur Kamera
+    if (!this.pose) this.facing = best.dir;
+    $('avatarPanel').classList.add('dressing');
+    $('hud').classList.add('dressing');
+  }
+  endDressing() {
+    if (!this.dressing) return;
+    this.dressing = null;
+    $('avatarPanel').classList.remove('dressing');
+    $('hud').classList.remove('dressing');
+    this.camera.zoom = 1;
+    this.camera.clearViewOffset();
+    this.cam.yaw = this.facing + Math.PI;
   }
 
   rebuildChar(old, avatar, name, bot = false) {
@@ -2634,6 +2673,22 @@ export class Game {
 
   updateCamera(dt) {
     const p = this.body.p;
+    // Umziehen: Kamera vor der Figur, Bild so verschoben, dass die Figur neben dem Menü steht
+    if (this.dressing) {
+      const d = this.dressing, f = this.pose ? this.pose.facing : d.dir;
+      const lookY = p.y + (this.pose ? 1.2 : 1.45);
+      this.camera.position.set(p.x + Math.sin(f) * d.dist, lookY + 0.7, p.z + Math.cos(f) * d.dist);
+      this.camera.lookAt(p.x, lookY, p.z);
+      const W = innerWidth, H = innerHeight;
+      // Hochformat: etwas herauszoomen, damit die ganze Figur über dem Menü Platz hat
+      const zoom = W > H ? 1 : 0.62;
+      if (this.camera.zoom !== zoom) this.camera.zoom = zoom;
+      if (W > H) this.camera.setViewOffset(W, H, W * 0.23, 0, W, H);
+      else this.camera.setViewOffset(W, H, 0, H * 0.2, W, H);
+      this.snapSun(p);
+      this.sky.position.copy(this.camera.position);
+      return;
+    }
     // Selfie: Kamera steht vor der Figur und schaut sie an
     if (this.selfie) {
       const f = this.facing, sx = Math.sin(f), sz = Math.cos(f);
@@ -2766,6 +2821,8 @@ export class Game {
     $('actions').replaceChildren();
     $('itemMenu').hidden = true;
     $('avatarPanel').hidden = true;
+    $('avatarPanel').classList.remove('dressing');
+    this.camera.clearViewOffset();
     $('mapPanel').hidden = true;
   }
 }
