@@ -412,3 +412,15 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .lot-grid .lot.on { background: var(--sun); box-shadow: 0 0 0 3px var(--cherry); }
 .lot-grid .lot.taken { background: #e0dbe9; color: #8a7fa0; }
 #dialogCard .color-dots { margin: 4px 0 8px; }
+/* Profil-Karte oben links: Figur, Name, Sterne */
+.me-card {
+  display: flex; align-items: center; gap: calc(var(--u) * 0.8); height: calc(var(--u) * 5.4); padding: 0 calc(var(--u) * 1.4) 0 calc(var(--u) * 0.3);
+  background: #fffdf5; border: 3px solid var(--ink); border-radius: 999px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; max-width: calc(var(--u) * 26);
+}
+.me-card img { width: calc(var(--u) * 4.8); height: calc(var(--u) * 4.8); border-radius: 50%; background: var(--sky); object-fit: cover; flex: none; }
+.me-text { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+.me-text b:first-child { font-size: calc(var(--u) * 1.75); font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-text span { font-size: calc(var(--u) * 1.6); font-weight: 900; color: #b8860b; }
+.phone-body .row-acts { display: flex; gap: 6px; }
+.phone-body .btn.fav { background: #fff; min-width: 44px; }
+.phone-body .btn.fav.on { background: var(--sun); }

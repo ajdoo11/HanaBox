@@ -108,12 +108,13 @@
     <button id="btnInvite" class="hbtn wide" hidden>👋 Einladen · <b id="roomCode"></b></button>
     <button id="btnMap" class="hbtn wide" hidden>🗺️ Karte</button>
     <button id="btnPhone" class="hbtn round phone-btn" title="Handy">📱</button>
+    <div id="meCard" class="me-card"><img id="meAvatar" alt=""><div class="me-text"><b id="meName"></b><span>⭐ <b class="starCount">0</b></span></div></div>
     <button id="btnVoice" class="hbtn wide voice-btn" hidden>🎤 Mikro</button>
-    <button id="btnPhoto" class="hbtn wide">📸 Selfie</button>
-    <span id="gameTitle" class="game-title"></span>
+    <button id="btnPhoto" class="hbtn wide" hidden>📸 Selfie</button>
+    <span id="gameTitle" class="game-title" hidden></span>
   </div>
   <div id="status" class="hud-status"></div>
-  <div id="scoreboard" class="scoreboard"></div>
+  <div id="scoreboard" class="scoreboard" hidden></div>
   <div id="chatLog" class="chatlog"></div>
   <div id="notice" class="notice"></div>
   <div id="joyBase" class="joy"><div id="joyKnob" class="knob"></div></div>
@@ -150,8 +151,8 @@
       <button id="gmReset" class="btn big">🔄 Figur zurücksetzen</button>
       <button id="gmSound" class="btn big">🔊 Ton an</button>
       <button id="gmQuests" class="btn big">🏆 Aufgaben & Abzeichen</button>
-      <button id="gmBots" class="btn big">🤖 Bot-Freunde: an</button>
-      <div style="display:flex;align-items:center;gap:8px;padding:4px 12px">
+      <button id="gmBots" class="btn big" hidden>🤖 Bot-Freunde: an</button>
+      <div style="display:none;align-items:center;gap:8px;padding:4px 12px">
         <span style="font-size:14px">🤖 Anzahl:</span>
         <input id="gmBotCount" type="range" min="0" max="20" value="6" style="flex:1">
         <span id="gmBotCountLabel" style="font-size:14px;min-width:24px;text-align:center">6</span>

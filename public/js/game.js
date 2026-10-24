@@ -21,6 +21,9 @@ import { track } from './quests.js';
 import { sfx } from './sfx.js';
 import { lotParts, lotInterior, lotFront } from './houses.js';
 
+const SHADOW_R = 85;
+const MAX_BOTS_SHOWN = 30;
+
 const ACT_LABELS = {
   sit: '🪑 Hinsetzen', sleep: '😴 Schlafen', bath: '🛁 Baden', shower: '🚿 Duschen', salon: '💇 Frisur machen',
   wardrobe: '👗 Umziehen', swing: '🎠 Schaukeln', treasure: '🎁 Schatz öffnen', brush: '🪥 Zähne putzen',
@@ -276,11 +279,12 @@ export class Game {
     this.scene.add(new THREE.HemisphereLight('#ffffff', '#a39ad0', 1.05));
     const sun = new THREE.DirectionalLight('#fff7e6', 2.2);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
+    // Grosser Schattenbereich um die Figur, damit Schatten nicht am Rand auftauchen und verschwinden
+    sun.shadow.mapSize.set(2048, 2048);
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.shadowMap.needsUpdate = true;
     const sc = sun.shadow.camera;
-    sc.left = -55; sc.right = 55; sc.top = 55; sc.bottom = -55; sc.near = 1; sc.far = 220;
+    sc.left = -SHADOW_R; sc.right = SHADOW_R; sc.top = SHADOW_R; sc.bottom = -SHADOW_R; sc.near = 1; sc.far = 260;
     sun.shadow.bias = -0.0005;
     sun.shadow.normalBias = 0.03;
     this.scene.add(sun, sun.target);
@@ -327,7 +331,9 @@ export class Game {
   // Baut Teile auf (für die feste Welt und für Abenteuer-Häuser, die man wieder entfernen kann)
   addParts(parts, parent, rec) {
     const disp = rec ? rec.disposables : this.disposables;
-    const { own } = buildStatic(parts, parent, disp);
+    const { own, meshes } = buildStatic(parts, parent, disp);
+    // Feste Welt: weit entfernte Teile im Nebel werden nicht gezeichnet (siehe updateLOD)
+    if (!rec) for (const m of meshes) this.addCullable(m);
     const ownSet = new Set(own);
     for (const p of parts) {
       let mesh = null;
@@ -349,7 +355,7 @@ export class Game {
         if (p.lockLamp) this.doorEntry(p.lockLamp).lamps.push(mesh);
         if (p.gem) { const g = { key: p.gem, mesh, x: p.x, y: p.y, z: p.z }; this.gems.push(g); rec?.gems.push(g); if (this.gotGem(p.gem)) mesh.visible = false; }
       }
-      if (p.k === 'sign') { const s = signMesh(p, disp); parent.add(s); continue; }
+      if (p.k === 'sign') { const s = signMesh(p, disp); parent.add(s); if (!rec) this.addCullable(s, 0.5); continue; }
       if (p.ring) this.addRing(p.x, p.y, p.z, p.ring, parent, rec);
       if (p.k === 'ramp') { if (!p.deco) { const rb = makeRamp(p); this.phys.add(rb); rec?.boxes.push(rb); } continue; }
       const box = makeBox(p.x, p.y, p.z, p.w, p.h, p.d, { k: p.k, n: p.n, dyn: !!p.m, part: p });
@@ -366,6 +372,13 @@ export class Game {
       if (p.k === 'dance' && mesh) this.danceTiles.push(mesh);
       if (p.k === 'checkpoint' && mesh) this.checkpointMeshes.set(p.n, mesh);
     }
+  }
+
+  addCullable(o, far = 1) {
+    o.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(o);
+    const c = box.getCenter(new THREE.Vector3());
+    (this.cullList || (this.cullList = [])).push({ o, x: c.x, z: c.z, r: Math.hypot(box.max.x - box.min.x, box.max.z - box.min.z) / 2, far });
   }
 
   doorEntry(k) {
@@ -532,7 +545,9 @@ export class Game {
     $('chatLog').replaceChildren();
     $('bigMsg').hidden = true;
     $('actions').replaceChildren();
-    $('btnMap').hidden = !this.def.destinations;
+    // Karte, Selfie und Spielerliste sind im Handy; oben links steht die eigene Profil-Karte
+    $('btnMap').hidden = true;
+    $('meName').textContent = this.myName || 'Ich';
     this.actionsKey = '';
     const bar = $('buildBar');
     bar.hidden = this.gameKey !== 'build' && this.gameKey !== 'town';
@@ -1035,7 +1050,7 @@ export class Game {
     if (cur) { cur.mesh.removeFromParent(); this.pets.delete(ownerId); }
     if (!want || !PETS[want - 1]) return;
     const mesh = makeItemMesh(ITEM_INDEX[PETS[want - 1].key]);
-    mesh.scale.setScalar(1.25);
+    mesh.scale.setScalar(0.95);
     const owner = ownerId === this.myId ? this.body.p : this.remotes.get(ownerId)?.pos;
     const pos = new THREE.Vector3(owner?.x || 0, owner?.y || 0, (owner?.z || 0) + 1.5);
     mesh.position.copy(pos);
@@ -1101,35 +1116,35 @@ export class Game {
   spawnWildlife() {
     if (this.gameKey !== 'town') return;
     const spawns = [
-      { key: 'chick', cx: 120, cz: 130, r: 14, n: 6, speed: 2.5, scale: 2.5 },
-      { key: 'bunny', cx: 126, cz: 118, r: 16, n: 4, speed: 4, scale: 2.5 },
-      { key: 'cat', cx: 112, cz: 126, r: 10, n: 2, speed: 3, scale: 2.5 },
-      { key: 'duck', cx: 0, cz: 0, r: 9, n: 5, speed: 2, scale: 2.5 },
-      { key: 'duck', cx: 0, cz: 175, r: 10, n: 3, speed: 2, scale: 2.5 },
-      { key: 'butterfly', cx: -16, cz: 16, r: 10, n: 4, speed: 3, fly: true, scale: 2.0 },
-      { key: 'butterfly', cx: 16, cz: -16, r: 8, n: 3, speed: 3, fly: true, scale: 2.0 },
-      { key: 'butterfly', cx: -120, cz: -40, r: 10, n: 3, speed: 3, fly: true, scale: 2.0 },
-      { key: 'turtle', cx: -10, cz: 175, r: 14, n: 3, speed: 1, scale: 2.5 },
-      { key: 'hamster', cx: -120, cz: -60, r: 12, n: 3, speed: 3, scale: 2.5 },
-      { key: 'fox', cx: 60, cz: -60, r: 18, n: 2, speed: 5, scale: 2.5 },
-      { key: 'dog', cx: 0, cz: 15, r: 10, n: 2, speed: 4, scale: 2.5 },
-      { key: 'bunny', cx: -60, cz: 100, r: 12, n: 3, speed: 4, scale: 2.5 },
-      { key: 'parrot', cx: 0, cz: -16, r: 8, n: 2, speed: 3, fly: true, scale: 2.0 },
+      { key: 'chick', cx: 120, cz: 130, r: 14, n: 6, speed: 2.5, scale: 1.1 },
+      { key: 'bunny', cx: 126, cz: 118, r: 16, n: 4, speed: 4, scale: 1.1 },
+      { key: 'cat', cx: 112, cz: 126, r: 10, n: 2, speed: 3, scale: 1.1 },
+      { key: 'duck', cx: 0, cz: 0, r: 9, n: 5, speed: 2, scale: 1.1 },
+      { key: 'duck', cx: 0, cz: 175, r: 10, n: 3, speed: 2, scale: 1.1 },
+      { key: 'butterfly', cx: -16, cz: 16, r: 10, n: 4, speed: 3, fly: true, scale: 1.3 },
+      { key: 'butterfly', cx: 16, cz: -16, r: 8, n: 3, speed: 3, fly: true, scale: 1.3 },
+      { key: 'butterfly', cx: -120, cz: -40, r: 10, n: 3, speed: 3, fly: true, scale: 1.3 },
+      { key: 'turtle', cx: -10, cz: 175, r: 14, n: 3, speed: 1, scale: 1.1 },
+      { key: 'hamster', cx: -120, cz: -60, r: 12, n: 3, speed: 3, scale: 1.1 },
+      { key: 'fox', cx: 60, cz: -60, r: 18, n: 2, speed: 5, scale: 1.1 },
+      { key: 'dog', cx: 0, cz: 15, r: 10, n: 2, speed: 4, scale: 1.1 },
+      { key: 'bunny', cx: -60, cz: 100, r: 12, n: 3, speed: 4, scale: 1.1 },
+      { key: 'parrot', cx: 0, cz: -16, r: 8, n: 2, speed: 3, fly: true, scale: 1.3 },
       // Schneeland
-      { key: 'bunny', cx: 2600, cz: 30, r: 25, n: 5, speed: 3, scale: 2.5 },
-      { key: 'fox', cx: 2620, cz: -20, r: 20, n: 3, speed: 5, scale: 2.5 },
-      { key: 'cat', cx: 2580, cz: 40, r: 15, n: 3, speed: 3, scale: 2.5 },
-      { key: 'dog', cx: 2610, cz: 50, r: 12, n: 2, speed: 4, scale: 2.5 },
+      { key: 'bunny', cx: 2600, cz: 30, r: 25, n: 5, speed: 3, scale: 1.1 },
+      { key: 'fox', cx: 2620, cz: -20, r: 20, n: 3, speed: 5, scale: 1.1 },
+      { key: 'cat', cx: 2580, cz: 40, r: 15, n: 3, speed: 3, scale: 1.1 },
+      { key: 'dog', cx: 2610, cz: 50, r: 12, n: 2, speed: 4, scale: 1.1 },
       // Tropeninsel
-      { key: 'parrot', cx: -2600, cz: 20, r: 30, n: 6, speed: 3, fly: true, scale: 2.0 },
-      { key: 'turtle', cx: -2580, cz: -10, r: 20, n: 4, speed: 1, scale: 2.5 },
-      { key: 'butterfly', cx: -2620, cz: 30, r: 20, n: 5, speed: 3, fly: true, scale: 2.0 },
-      { key: 'duck', cx: -2600, cz: -30, r: 12, n: 4, speed: 2, scale: 2.5 },
+      { key: 'parrot', cx: -2600, cz: 20, r: 30, n: 6, speed: 3, fly: true, scale: 1.3 },
+      { key: 'turtle', cx: -2580, cz: -10, r: 20, n: 4, speed: 1, scale: 1.1 },
+      { key: 'butterfly', cx: -2620, cz: 30, r: 20, n: 5, speed: 3, fly: true, scale: 1.3 },
+      { key: 'duck', cx: -2600, cz: -30, r: 12, n: 4, speed: 2, scale: 1.1 },
       // Zauberwald
-      { key: 'fox', cx: 20, cz: 2600, r: 25, n: 4, speed: 5, scale: 2.5 },
-      { key: 'bunny', cx: -20, cz: 2620, r: 20, n: 5, speed: 4, scale: 2.5 },
-      { key: 'butterfly', cx: 10, cz: 2580, r: 25, n: 6, speed: 3, fly: true, scale: 2.0 },
-      { key: 'hamster', cx: -30, cz: 2610, r: 15, n: 3, speed: 3, scale: 2.5 },
+      { key: 'fox', cx: 20, cz: 2600, r: 25, n: 4, speed: 5, scale: 1.1 },
+      { key: 'bunny', cx: -20, cz: 2620, r: 20, n: 5, speed: 4, scale: 1.1 },
+      { key: 'butterfly', cx: 10, cz: 2580, r: 25, n: 6, speed: 3, fly: true, scale: 1.3 },
+      { key: 'hamster', cx: -30, cz: 2610, r: 15, n: 3, speed: 3, scale: 1.1 },
     ];
     for (const s of spawns) {
       const typeIdx = ITEM_INDEX[s.key];
@@ -1462,6 +1477,7 @@ export class Game {
     if (veh) this.char.root.add(veh);
     if ((a.pet || 0) !== (this.pets.get(this.myId)?.kind || 0)) { this.syncPet(this.myId, a); if (a.pet) { this.notice('🐾 Dein Haustier läuft dir jetzt überall nach!', 3000); this.quest?.('adopt'); } }
     this.net.send({ t: 'avatar', avatar: a });
+    window.dispatchEvent(new CustomEvent('myavatar'));
     this.burst(new THREE.Vector3(this.body.p.x, this.body.p.y + 1.6, this.body.p.z), ['#ffffff', '#f48fb1', '#b39ddb', '#fff59d'], 16, 4);
     sfx('magic');
   }
@@ -1655,7 +1671,18 @@ export class Game {
     this.lastSend = 0;
   }
 
-  goTo(name, x, z, face = Math.PI) {
+  // Zu einem Freund reisen (Handy → Freunde)
+  travelToPlayer(id) {
+    const r = this.remotes.get(id);
+    if (!r) return this.notice('Nicht mehr online 😢', 2500);
+    const x = r.pos.x + Math.cos(r.rot) * 2, z = r.pos.z - Math.sin(r.rot) * 2;
+    const s = this.phys.surfaceAt(x, z, r.pos.y + 2.5);
+    if (!Number.isFinite(s) || s < r.pos.y - 5) return this.notice(`🔒 ${r.name} ist gerade in einem Abenteuer. Warte kurz!`, 3000);
+    if (this.adv) { this.leaveAdventure(); this.houseEntry = null; }
+    this.goTo(`👋 bei ${r.name}`, x, z, r.rot, r.pos.y);
+  }
+
+  goTo(name, x, z, face = Math.PI, y = 28) {
     if (this.carriedBy != null) return;
     if (this.driving) this.exitVehicle();
     if (this.carrying != null) this.net.send({ t: 'putdown' });
@@ -1663,7 +1690,7 @@ export class Game {
     const fade = $('fade');
     fade.classList.add('on');
     setTimeout(() => {
-      this.teleport(x, Math.max(0.15, this.phys.surfaceAt(x, z, 30) + 0.05) || 0.15, z, face);
+      this.teleport(x, Math.max(0.15, this.phys.surfaceAt(x, z, y + 2) + 0.05) || 0.15, z, face);
       fade.classList.remove('on');
       this.notice(`📍 ${name}`, 1800);
     }, 220);
@@ -2420,7 +2447,8 @@ export class Game {
 
   updateFriendTags() {
     for (const r of this.remotes.values()) {
-      const isFriend = !r.bot && !r.staticBot && this.friends.has(r.name);
+      // Namen aller echten Spieler leuchten (Bots nicht), damit man sich findet
+      const isFriend = !r.bot && !r.staticBot;
       if (!isFriend) { if (r.tag) r.tag.visible = false; continue; }
       if (!r.tag) r.tag = this.nameTag(r.name);
       const d = r.pos.distanceTo(this.body.p);
@@ -2434,7 +2462,18 @@ export class Game {
     const p = this.body.p;
     for (const v of this.parked) v.visible = Math.abs(v.position.x - p.x) < 90 && Math.abs(v.position.z - p.z) < 90;
     for (const r of this.rings) r.visible = Math.abs(r.position.x - p.x) < 70 && Math.abs(r.position.z - p.z) < 70 && Math.abs(r.position.y - p.y) < 12;
-    for (const r of this.remotes.values()) r.char.root.visible = Math.abs(r.pos.x - p.x) < 110 && Math.abs(r.pos.z - p.z) < 110;
+    // Spieler sieht man weit, von den vielen Bots nur die nächsten (sonst ruckelt es)
+    const bots = [];
+    for (const r of this.remotes.values()) {
+      const d = Math.max(Math.abs(r.pos.x - p.x), Math.abs(r.pos.z - p.z));
+      if (r.bot && !r.staticBot) { r.char.root.visible = false; if (d < 90) bots.push([d, r]); }
+      else r.char.root.visible = d < (r.staticBot ? 70 : 150);
+    }
+    bots.sort((a, b) => a[0] - b[0]);
+    for (let i = 0; i < Math.min(MAX_BOTS_SHOWN, bots.length); i++) bots[i][1].char.root.visible = true;
+    // Teile der festen Welt, die ganz im Nebel liegen, nicht zeichnen (Schilder schon früher)
+    const cx = this.camera.position.x, cz = this.camera.position.z, D = this.viewDist || 400;
+    for (const c of this.cullList || []) c.o.visible = Math.hypot(c.x - cx, c.z - cz) - c.r < D * c.far;
   }
 
   handleTaps() {
@@ -2494,7 +2533,7 @@ export class Game {
   // Kamera, die nicht durch Wände schaut
   // Die Schatten-Kamera wandert nur in ganzen Bildpunkten mit, sonst flimmern die Kanten
   snapSun(p) {
-    const sun = this.sun, T = 110 / sun.shadow.mapSize.x;
+    const sun = this.sun, T = (2 * SHADOW_R) / sun.shadow.mapSize.x;
     const eye = new THREE.Vector3(40, 80, 25);
     const look = new THREE.Matrix4().lookAt(eye, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0));
     const v = new THREE.Vector3(p.x, p.y, p.z).applyMatrix4(look.clone().invert());
@@ -2539,7 +2578,8 @@ export class Game {
   frame = now => {
     if (!this.running) return;
     this.raf = requestAnimationFrame(this.frame);
-    const rawDt = (now - this.lastT) / 1000;
+    // Der erste Zeitstempel kann vor dem Start liegen: nie rückwärts rechnen (sonst fliegt die Kamera weg)
+    const rawDt = Math.max(0, (now - this.lastT) / 1000);
     const dt = Math.min(0.1, rawDt);
     this.lastT = now;
     this.adaptQuality(rawDt);
@@ -2574,27 +2614,29 @@ export class Game {
     if (this.photoReq) this.finishPhoto();
   };
 
-  // Leistung anpassen, ohne dass das Bild unscharf wird: die Auflösung bleibt immer gleich,
-  // bei langsamen Geräten werden nacheinander Schatten seltener/aus und die Sichtweite kürzer.
+  // Leistung anpassen: Schatten bleiben immer an (sonst kommen und gehen sie). Bei langsamen Geräten
+  // werden Schritt für Schritt die Schatten seltener neu berechnet, die Kantenglättung abgeschaltet,
+  // die Auflösung etwas gesenkt und die Sichtweite kürzer. Besser wird es erst nach längerer Zeit flüssig
+  // (sonst springt die Qualität hin und her).
   adaptQuality(rawDt) {
-    const q = this.quality || (this.quality = { avg: 1 / 60, t: 0, frame: 0, level: 0 });
+    const q = this.quality || (this.quality = { avg: 1 / 60, slow: 0, fast: 0, frame: 0, level: 0 });
+    if (rawDt > 0.5 || rawDt <= 0) return; // Tab war im Hintergrund
     q.avg += (rawDt - q.avg) * 0.05;
-    q.t += rawDt;
     q.frame++;
-    const every = q.level >= 1 ? 4 : 2;
-    this.renderer.shadowMap.needsUpdate = this.sun.castShadow && q.frame % every === 0;
-    if (q.t < 2) return;
-    q.t = 0;
+    this.renderer.shadowMap.needsUpdate = q.frame % (q.level >= 2 ? 4 : q.level >= 1 ? 3 : 2) === 0;
+    q.slow = q.avg > 1 / 45 ? q.slow + rawDt : 0;
+    q.fast = q.avg < 1 / 57 ? q.fast + rawDt : 0;
     let level = q.level;
-    if (q.avg > 1 / 38) level = Math.min(3, level + 1);
-    else if (q.avg < 1 / 56) level = Math.max(0, level - 1);
+    if (q.slow > 2) level = Math.min(3, level + 1);
+    else if (q.fast > 10) level = Math.max(0, level - 1);
     if (level === q.level) return;
+    q.slow = q.fast = 0;
     q.level = level;
-    const shadows = level < 2;
-    // Umrisslinien bleiben immer (gehören zum Look), auf langsamen Geräten ohne Kantenglättung
     this.post.setSamples(level >= 2 ? 0 : null);
-    if (this.sun.castShadow !== shadows) { this.sun.castShadow = shadows; this.renderer.shadowMap.needsUpdate = true; }
-    const far = level >= 3 ? 260 : 420;
+    const pr = Math.min(devicePixelRatio, [2, 1.5, 1.25, 1][level]);
+    if (this.renderer.getPixelRatio() !== pr) { this.renderer.setPixelRatio(pr); this.onResize(); }
+    const far = [420, 300, 230, 170][level];
+    this.viewDist = far - 20;
     if (this.scene.fog) { this.scene.fog.far = far; this.scene.fog.near = far * 0.3; }
     this.camera.far = far + 40;
     this.camera.updateProjectionMatrix();

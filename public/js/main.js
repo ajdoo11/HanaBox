@@ -108,6 +108,15 @@ function bigLoop(now) {
   big.post.render(big.scene, big.cam);
 }
 
+// Profil-Karte oben links im Spiel: Figur, Name und Sterne auf einen Blick
+function updateMeCard() {
+  renderMini();
+  $('meAvatar').src = $('miniAvatar').toDataURL();
+  showStars();
+}
+window.addEventListener('myavatar', updateMeCard);
+$('meCard').onclick = () => { $('btnPhone').click(); };
+
 // ---------- Startseite ----------
 function showMenu() {
   $('menu').hidden = false;
@@ -309,6 +318,7 @@ function startGame(welcome, myNet) {
   input.reset();
   game = new Game({ renderer, input, net: myNet, welcome, name: profile.name, avatar: profile.avatar, onLeave: leave });
   window.hbGame = game; // zum Testen in der Browser-Konsole
+  updateMeCard();
   game.onPhoto = showPhoto;
   // Sprachchat startet automatisch, sobald man online in der Welt ist
   if (!localMode) {
@@ -396,10 +406,21 @@ function renderPhone() {
     body.append(el('p', { textContent: 'Mach ein Foto von dir mit allen, die gerade in der Nähe sind. Danach kannst du es speichern.' }));
     body.append(el('button', { className: 'row-btn', textContent: '📸 Selfie machen', onclick: () => { closePhone(); game.takePhoto(); } }));
   } else if (phoneTab === 'friends') {
-    const online = new Set([...game.remotes.values()].map(r => r.name));
-    if (!game.friends.size) body.append(el('p', { textContent: 'Noch keine Freunde. Tippe in der Spielerliste oben rechts auf einen Namen, dann wird er dein Freund ⭐.' }));
-    for (const n of game.friends) {
-      body.append(el('div', { className: 'row-btn' }, el('span', { textContent: `${online.has(n) ? '🟢' : '⚪'} ${n}` }),
+    // Alle, die gerade spielen, stehen automatisch hier. Mit «Hin» reist man zu ihnen.
+    const live = [...game.remotes.values()].filter(r => !r.bot && !r.staticBot).sort((a, b) => (game.friends.has(b.name) - game.friends.has(a.name)) || a.name.localeCompare(b.name));
+    body.append(el('h3', { textContent: `🟢 Jetzt online (${live.length})` }));
+    if (!live.length) body.append(el('p', { textContent: 'Gerade spielt niemand sonst. Sobald jemand kommt, steht er hier.' }));
+    for (const r of live) {
+      const fav = game.friends.has(r.name);
+      body.append(el('div', { className: 'row-btn' }, el('span', { textContent: `${fav ? '⭐' : '🟢'} ${r.name}` }),
+        el('span', { className: 'row-acts' },
+          el('button', { className: 'btn small fav' + (fav ? ' on' : ''), textContent: fav ? '⭐' : '☆', ariaLabel: 'Lieblingsfreund', onclick: () => { game.toggleFriend(r.name); renderPhone(); } }),
+          el('button', { className: 'btn small use', textContent: '📍 Hin', onclick: () => { closePhone(); game.travelToPlayer(r.id); } }))));
+    }
+    const away = [...game.friends].filter(n => !live.some(r => r.name === n));
+    if (away.length) {
+      body.append(el('h3', { textContent: '⚪ Lieblingsfreunde (offline)' }));
+      for (const n of away) body.append(el('div', { className: 'row-btn' }, el('span', { textContent: `⚪ ${n}` }),
         el('button', { className: 'btn small', textContent: 'Entfernen', onclick: () => { game.toggleFriend(n); renderPhone(); } })));
     }
   } else {

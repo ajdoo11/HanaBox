@@ -11,8 +11,11 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
   const rooms = new Map();
   // Alle spielen zusammen in derselben Welt
   const SHARED_CODE = 'HANA';
-  const BOT_TARGET_DEFAULT = { town: 6, hangout: 4, tag: 4, coins: 4, obby: 0, build: 0 };
+  // In jeder Stadt (Hana-Stadt und jedes Land) laufen immer gleich viele Bots herum
+  const BOT_TARGET_DEFAULT = { town: 80, hangout: 4, tag: 4, coins: 4, obby: 0, build: 0 };
   let nextBotId = 100000;
+  const BOT_AWAKE = 230; // Bots bewegen sich nur, wenn ein Spieler so nah ist
+  const BOT_VIEW = 170; // so weit sieht ein Spieler die Bots
 
 
   const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
@@ -61,6 +64,11 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     }
     // Bot-Gebiete: Hana-Stadt (null) und jedes Land bekommen gleich viele Bots
     botAreas() { return this.game === 'town' ? [null, ...LAND_DEFS.filter(l => l.key !== 'stadt')] : [null]; }
+    // Bots der Hana-Stadt starten verteilt an den Treffpunkten, nicht alle auf dem Stadtplatz
+    townSpawn() {
+      const poi = WORLDS.town.pois[Math.floor(Math.random() * WORLDS.town.pois.length)];
+      return [poi.x + (Math.random() - 0.5) * 4, (poi.y || 0) + 0.2, poi.z + (Math.random() - 0.5) * 4];
+    }
     landSpawn(ld) {
       for (let i = 0; i < 30; i++) {
         const x = ld.cx + (Math.random() - 0.5) * 300, z = ld.cz + (Math.random() - 0.5) * 300;
@@ -71,10 +79,10 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     syncBots() {
       const humans = this.players.size;
       for (const area of this.botAreas()) {
-        const want = !this.botsEnabled || humans === 0 ? 0 : area ? this.botTarget : Math.max(0, this.botTarget - Math.max(0, humans - 1));
+        const want = !this.botsEnabled || humans === 0 ? 0 : this.botTarget;
         const dyn = [...this.bots.values()].filter(b => !b.staticBot && (b.land || null) === area);
         for (let n = dyn.length; n < want; n++) {
-          const b = new Bot(this, nextBotId++, area ? { pos: this.landSpawn(area), land: area } : {});
+          const b = new Bot(this, nextBotId++, area ? { pos: this.landSpawn(area), land: area } : this.game === 'town' ? { pos: this.townSpawn() } : {});
           this.bots.set(b.id, b);
           if (this.game === 'tag') this.itMs.set(b.id, 0);
           this.broadcast({ t: 'join', player: b.pub() });
@@ -257,8 +265,10 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
         });
       }
       if (this.game === 'tag') this.tickTag(dt, now);
-      // Bots
+      // Bots: wer weit weg von allen Spielern ist, wartet (spart Rechenzeit, sieht ja niemand)
+      const eyes = [...this.players.values()].map(p => p.state);
       for (const b of this.bots.values()) {
+        if (!b.staticBot && b.follow == null && b.carriedBy == null && !eyes.some(s => Math.abs(s[0] - b.state[0]) < BOT_AWAKE && Math.abs(s[2] - b.state[2]) < BOT_AWAKE)) continue;
         if (b.carriedBy != null) {
           const c = this.entity(b.carriedBy);
           if (c) { const [x, y, z] = this.carryPos(c); b.state = [x, y, z, c.state[3], ANIMS.indexOf('carried'), 0]; b.dirty = true; if (b.body) { b.body.p.x = x; b.body.p.y = y; b.body.p.z = z; } }
@@ -302,10 +312,25 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
       }
     }
 
+    // Jeder Spieler bekommt die Bewegungen aller Spieler, aber nur die der Bots in seiner Nähe
     flushStates() {
       const l = [];
       for (const p of this.allEntities()) if (p.dirty) { p.dirty = false; l.push([p.id, ...p.state]); }
-      if (l.length) this.broadcast({ t: 'st', l });
+      for (const pl of this.players.values()) {
+        const [px, , pz] = pl.state;
+        const inView = s => Math.abs(s[0] - px) < BOT_VIEW && Math.abs(s[2] - pz) < BOT_VIEW;
+        const out = l.filter(row => !this.bots.has(row[0]) || inView([row[1], row[2], row[3]]));
+        const sent = new Set(out.map(row => row[0]));
+        const near = new Set();
+        for (const b of this.bots.values()) {
+          if (!inView(b.state)) continue;
+          near.add(b.id);
+          // neu in Sichtweite: aktuelle Position schicken, auch wenn der Bot gerade still steht
+          if (!pl.near?.has(b.id) && !sent.has(b.id)) out.push([b.id, ...b.state]);
+        }
+        pl.near = near;
+        if (out.length) send(pl.ws, { t: 'st', l: out });
+      }
     }
   }
 
@@ -386,12 +411,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
         room.broadcast({ t: 'chat', id: p.id, i: m.i });
         room.onHumanChat(p, m.i);
         break;
-      case 'bots':
-        if (typeof m.count === 'number') room.botTarget = Math.max(0, Math.min(20, Math.round(m.count)));
-        room.botsEnabled = m.on !== false;
-        room.syncBots();
-        room.broadcast({ t: 'notice', text: room.botsEnabled ? `🤖 ${room.botTarget} Bot-Freunde in jeder Welt!` : '🤖 Bot-Freunde sind gegangen' });
-        break;
+      case 'bots': break; // Die Bot-Anzahl ist fest (80 pro Stadt) und kann nicht mehr verstellt werden
       case 'pref':
         p.grabbable = m.grab !== false;
         break;

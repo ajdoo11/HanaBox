@@ -80,13 +80,18 @@ export function needsOwnMesh(p) {
   return !!(p.m || p.k === 'dance' || p.k === 'checkpoint' || p.key || p.glow || p.own);
 }
 
+// Teile ohne Leuchten/Durchsicht/Spezialboden tragen ihre Farbe als Eckenfarbe: dann können alle Teile
+// mit derselben Oberfläche (Textur) zusammen gezeichnet werden, egal welche Farbe sie haben (viel flüssiger).
+const SPECIAL = new Set(['lava', 'bounce', 'goal', 'water', 'glass', 'dance']);
+const vertexColored = p => !p.emissive && !p.opacity && !SPECIAL.has(p.k);
+
 function materialKey(p) {
   const big = p.w * p.d > 2500 || p.k === 'ground' || p.k === 'water' || p.noShadow;
-  return [p.c, p.tex || '', p.k === 'lava' || p.k === 'bounce' || p.k === 'goal' || p.k === 'water' || p.k === 'glass' ? p.k : '', p.emissive || '', p.opacity || '', big ? 'n' : 's', p.texScale || 1].join('|');
+  return [vertexColored(p) ? 'vc' : p.c, p.tex || '', p.k === 'lava' || p.k === 'bounce' || p.k === 'goal' || p.k === 'water' || p.k === 'glass' ? p.k : '', p.emissive || '', p.opacity || '', big ? 'n' : 's', p.texScale || 1].join('|');
 }
 
-export function makeMaterial(p) {
-  const o = { color: p.c };
+export function makeMaterial(p, vc = false) {
+  const o = vc ? { color: '#ffffff', vertexColors: true } : { color: p.c };
   const tex = getTexture(p.tex);
   if (tex) o.map = tex;
   switch (p.k) {
@@ -170,6 +175,7 @@ function fixWalls(parts) {
 }
 
 // Baut alle statischen Teile zusammengefasst. Gibt die Teile zurück, die ein eigenes Mesh brauchen.
+const tmpColor = new THREE.Color();
 export function buildStatic(parts, scene, disposables) {
   fixCoplanar(parts);
   const groups = new Map();
@@ -181,7 +187,13 @@ export function buildStatic(parts, scene, disposables) {
     const chunk = big ? 'all' : `${Math.floor(p.x / 64)},${Math.floor(p.z / 64)}`;
     const key = materialKey(p) + '#' + chunk;
     if (!groups.has(key)) groups.set(key, { p, geos: [] });
-    groups.get(key).geos.push(partGeometry(p));
+    const geo = partGeometry(p);
+    if (vertexColored(p)) {
+      const c = tmpColor.set(p.c), n = geo.attributes.position.count, col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    }
+    groups.get(key).geos.push(geo);
   }
   const meshes = [];
   for (const [key, { p, geos }] of groups) {
@@ -192,7 +204,7 @@ export function buildStatic(parts, scene, disposables) {
     const merged = mergeGeometries(geos, false);
     for (const g of geos) g.dispose();
     if (!merged) continue;
-    const mat = makeMaterial(p);
+    const mat = makeMaterial(p, vertexColored(p));
     const mesh = new THREE.Mesh(merged, mat);
     const shadow = key.split('|')[5] === 's';
     mesh.castShadow = shadow && p.k !== 'glass';

@@ -44,12 +44,15 @@ function wheel(g, x, y, z, r, w) {
   g.userData.wheels.push(wg);
 }
 
+// Strassen, Gehwege und Plätze liegen als dünne Platten (bis 0.14 hoch) auf dem Boden:
+// Landfahrzeuge werden darum etwas angehoben, sonst stecken die Räder darin.
+const LIFT = 0.15;
 export const SEATS = {
-  car: { pos: [0, 0.6, -0.25], anim: 'drive' },
-  jeep: { pos: [0, 0.85, -0.2], anim: 'drive' },
-  kart: { pos: [0, 0.22, -0.25], anim: 'drive' },
-  bike: { pos: [0, 0.8, -0.15], anim: 'bike' },
-  scooter: { pos: [0, 0.25, -0.05], anim: 'stand' },
+  car: { pos: [0, 0.6 + LIFT, -0.25], anim: 'drive' },
+  jeep: { pos: [0, 0.85 + LIFT, -0.2], anim: 'drive' },
+  kart: { pos: [0, 0.22 + LIFT, -0.25], anim: 'drive' },
+  bike: { pos: [0, 0.8 + LIFT, -0.15], anim: 'bike' },
+  scooter: { pos: [0, 0.25 + LIFT, -0.05], anim: 'stand' },
   boat: { pos: [0, 0.3, -0.3], anim: 'drive' },
   speedboat: { pos: [0, 0.7, -0.2], anim: 'drive' },
 };
@@ -127,7 +130,7 @@ export function makeVehicle(type, colorIdx) {
       add(g, RB(1.4, 0.12, 0.6, 0.06), seat, 0, 0.45, 0.6);
       add(g, RB(0.08, 0.6, 0.08, 0.02), wood, 0.4, 0.2, -1.0);
       add(g, RB(0.08, 0.6, 0.08, 0.02), wood, -0.4, 0.2, -1.0);
-      add(g, CYL, wood, 0, 0.2, -1.0, 0.04, 1.6, 0.04, 0, 0, Math.PI / 2);
+      add(g, CYL, wood, 0, 0.5, -1.0, 0.04, 2.2, 0.04).rotation.z = Math.PI / 2;
       break;
     }
     case 'speedboat': {
@@ -144,6 +147,7 @@ export function makeVehicle(type, colorIdx) {
       break;
     }
   }
+  if (!VEHICLES[type]?.water) for (const c of g.children) c.position.y += LIFT;
   for (const w of g.userData.wheels) mergeChildren(w);
   mergeChildren(g);
   return g;
