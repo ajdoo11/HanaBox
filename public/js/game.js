@@ -833,7 +833,7 @@ export class Game {
         break;
       }
       case 'score': this.scores.set(m.id, m.v); this.renderScores(); break;
-      case 'notice': this.notice(m.text, 3500); break;
+      case 'notice': this.notice(m.text, 3500); this.houseWish = null; break; // z.B. «Grundstück gehört schon jemandem»
       case 'place':
         if (this.build?.place(m.x, m.y, m.z, m.k) && m.by === this.myId) sfx('place');
         break;
@@ -1654,6 +1654,15 @@ export class Game {
   buildHouse(lot, style, wall, roof) {
     this.houseWish = lot;
     this.net.send({ t: 'house', lot, style, wall, roof });
+    this.notice('🔨 Dein Haus wird gebaut …', 2000);
+    // Antwortet der Server nicht (z.B. alte Server-Version), nicht einfach still nichts tun
+    clearTimeout(this.houseTimer);
+    this.houseTimer = setTimeout(() => {
+      if (this.houseWish !== lot) return;
+      this.houseWish = null;
+      this.notice('😕 Der Server hat nicht geantwortet. Versuch es gleich nochmal.', 4000);
+      console.warn('Haus bauen: keine Antwort vom Server – läuft dort die neuste Version?');
+    }, 5000);
   }
   goHome() {
     const i = this.myLot();
