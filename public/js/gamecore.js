@@ -244,6 +244,15 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
       const now = Date.now();
       if (this.game === 'town') {
         for (const p of this.players.values()) {
+          // Hochgehobene Spieler bewegt der Server mit (auch wenn ihr Gerät gerade langsam oder im Hintergrund ist)
+          if (p.carriedBy != null) {
+            const c = this.entity(p.carriedBy);
+            if (!c) { p.carriedBy = null; continue; }
+            const [x, y, z] = this.carryPos(c);
+            p.state = [x, y, z, c.state[3], ANIMS.indexOf('carried'), 0];
+            p.dirty = true;
+            continue;
+          }
           if (p.rideOf == null) continue;
           const d = this.players.get(p.rideOf);
           if (!d || !d.state[5]) { endRide(this, p); continue; }
@@ -398,7 +407,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     switch (m.t) {
       case 's': {
         const s = m.s;
-        if (!Array.isArray(s) || s.length < 5 || p.rideOf != null) return;
+        if (!Array.isArray(s) || s.length < 5 || p.rideOf != null || p.carriedBy != null) return;
         const a = Number.isInteger(s[4]) && s[4] >= 0 && s[4] < ANIMS.length ? s[4] : 0;
         const v = Number.isInteger(s[5]) && s[5] >= 0 && s[5] <= VEHICLES.length * 16 ? s[5] : 0;
         p.state = [num(s[0], -3200, 3200), num(s[1], -100, 300), num(s[2], -3200, 3200), num(s[3], -50, 50), a, v];
