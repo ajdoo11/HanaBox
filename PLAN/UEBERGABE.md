@@ -42,9 +42,16 @@ Diese Datei ist für die nächste Sitzung. Lies sie zuerst, dann `PLAN/Naechste-
 - Tiere (Teil 4): `items.js` mit `bigEyes()` (Kulleraugen mit Glanzpunkt), `cheeks()` (rosa Bäckchen), `paws()`; grosser Kopf, runde Pfoten. Gilt für Haustiere und die Quietschente.
 - Stil ist eigenständig: keine Simpsons-Figuren, keine gelbe Haut, kein Logo.
 
+## Eigene Häuser (seit 24.10.)
+- Katalog in `shared.js`: `HOUSE_LOTS` (12 Grundstücke, z = -185, Tür nach Norden zur Ringstrasse), `HOUSE_STYLES` (Preise), `HOUSE_WALLS`/`HOUSE_ROOFS`.
+- `public/js/houses.js`: `lotParts(i, h)` baut ein freies Grundstück (Schild «Frei · Nr. X») oder das Haus samt Innenraum (`lotInterior(i)`, bei z = -2100). Tür-Portal `lot:i`.
+- Server (`gamecore.js`): Nachricht `house` {lot, style, wall, roof}, Besitzer = Kontoname, ein Haus pro Spieler (neues Grundstück = Umzug). Gespeichert in den Stadt-Daten (`houses`), neue Spieler bekommen sie im `welcome`. Der Server schickt jetzt auch den eigenen Namen im `welcome` mit.
+- Spiel (`game.js`): `setHouse`, `myLot`, `goHome`, `buildHouse`. Grundstücke sind Chunks (`addChunk`/`removeChunk`). Wer im Innenraum ist, wenn das Haus umgebaut wird, wird mitversetzt.
+- Rucksack (`main.js`): Abschnitt «🏡 Häuser», `houseDialog()` mit Farben und Grundstück-Raster. Kauf des Haustyps wie bei den Fahrzeugen nur im Gerät (Server prüft Sterne nicht).
+
 ## 4. Offen (Reihenfolge, siehe PLAN/Naechste-Schritte.md)
 1. ~~Rucksack-Shop~~ erledigt (noch auf Render deployen).
-2. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler gebaut, Preis 40–150 Sterne.
+2. ~~Häuser kaufen~~ erledigt (siehe «Eigene Häuser»). Noch auf Render deployen.
 3. Großes Redesign: HAT VORRANG (Wunsch vom 24.10.). Teil 1+2 erledigt (siehe unten «Neue Grafik»). Teil 3 (Gebäude/Bäume) und Teil 4 (Tiere) erledigt. Offen: Leistungstest auf echtem iPad/Handy.
 4. Bus: Mitfahrende anderer Spieler sind noch nicht sichtbar; Bus-Aussehen am Bildschirm bestätigen.
 5. Sterne-Deckel und Arbeitswartezeit sind nur im Gerät. Auf Wunsch serverseitig machen. Gilt auch für Rucksack-Käufe (Server prüft Besitz nicht).

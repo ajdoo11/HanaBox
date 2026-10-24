@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { toonMat, Outline } from './toon.js';
 import { WORLDS } from './worlds.js';
-import { GAMES, BLOCK_TYPES, ANIMS, ITEM_TYPES, ITEM_INDEX, VEHICLES, PETS, chatText, vehCode, vehDecode } from './shared.js';
+import { GAMES, BLOCK_TYPES, ANIMS, ITEM_TYPES, ITEM_INDEX, VEHICLES, PETS, chatText, vehCode, vehDecode, HOUSE_LOTS } from './shared.js';
 import { Physics, Body, makeBox, makeRamp, PLAYER, SEA } from './physics.js';
 import { Character } from './avatar.js';
 import { BuildWorld, blockIcon } from './build.js';
@@ -19,6 +19,7 @@ import { VoiceChat } from './voice.js';
 import { makeAdventure, hourIndex, minutesLeft } from './adventure.js';
 import { track } from './quests.js';
 import { sfx } from './sfx.js';
+import { lotParts, lotInterior, lotFront } from './houses.js';
 
 const ACT_LABELS = {
   sit: '🪑 Hinsetzen', sleep: '😴 Schlafen', bath: '🛁 Baden', shower: '🚿 Duschen', salon: '💇 Frisur machen',
@@ -60,7 +61,7 @@ export class Game {
     this.gameKey = welcome.game;
     this.code = welcome.code;
     this.myId = welcome.id;
-    this.myName = name;
+    this.myName = welcome.name || name; // mit Konto: der Name, den auch alle anderen sehen
     this.timeOffset = welcome.now - Date.now();
     this.def = WORLDS[this.gameKey];
     this.camInit = this.def.cam || { pitch: 0.38, dist: 14 };
@@ -312,6 +313,8 @@ export class Game {
       this.scene.add(plane);
       this.groundPick = plane;
       this.disposables.push(plane.geometry, plane.material);
+      // Grundstücke für eigene Häuser (zuerst alle frei, der Server schickt danach die gebauten Häuser)
+      this.lots = HOUSE_LOTS.map((_, i) => ({ h: null, rec: this.addChunk(lotParts(i, null).parts) }));
     }
     if (this.gameKey === 'coins') {
       this.coinGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.16, 20);
@@ -514,6 +517,7 @@ export class Game {
     if (x.items) for (const it of x.items) this.addItem(it);
     if (x.toggles) for (const [k, v] of Object.entries(x.toggles)) this.applyToggle(k, v);
     if (x.blocks && this.build) for (const [bx, by, bz, k] of x.blocks) this.build.place(bx, by, bz, k);
+    if (x.houses) for (const [lot, h] of x.houses) this.setHouse(lot, h);
     if (x.coins) for (const c of x.coins) this.addCoin(c);
     if (x.round !== undefined) this.round = x.round;
     if (x.it !== undefined) this.setIt(x.it, true);
@@ -850,6 +854,16 @@ export class Game {
       }
       case 'it': this.setIt(m.id, false, m.by); break;
       case 'item': this.addItem(m.it); break;
+      case 'house': {
+        this.setHouse(m.lot, m.h);
+        if (m.h?.owner === this.myName && this.houseWish === m.lot) {
+          this.houseWish = null;
+          sfx('magic');
+          this.goTo('🏡 Dein Haus', lotFront(m.lot).x, lotFront(m.lot).z, 0);
+          this.notice('🏡 Dein Haus ist fertig! Geh durch die Tür hinein.', 4000);
+        }
+        break;
+      }
       case 'itemHold': this.setHolder(m.id, m.by); break;
       case 'itemDrop': {
         const it = this.items.get(m.id);
@@ -1476,6 +1490,35 @@ export class Game {
     else this.notice(`${V.emoji} Los geht's! Joystick hoch = fahren, links/rechts = lenken`, 3000);
   }
 
+  // ---------- Eigene Häuser ----------
+  setHouse(i, h) {
+    const lot = this.lots?.[i];
+    if (!lot) return;
+    // Wer gerade im alten Innenraum ist, landet vor dem Grundstück (sonst fällt man durch den Boden)
+    const inside = lot.h && Math.hypot(this.body.p.x - lotInterior(i).x, this.body.p.z - lotInterior(i).z) < 40;
+    this.removeChunk(lot.rec);
+    const { parts, interior } = lotParts(i, h);
+    lot.h = h;
+    lot.rec = this.addChunk(parts);
+    if (interior) this.def.interiors['lot:' + i] = interior;
+    else delete this.def.interiors['lot:' + i];
+    if (inside) {
+      const [ex, ey, ez] = interior ? interior.spawn.entry : [];
+      if (interior) this.teleport(ex, ey + 0.05, ez, interior.spawn.face);
+      else { this.place = 'Hana-Stadt'; this.teleport(lotFront(i).x, 0.15, lotFront(i).z, 0); }
+    }
+  }
+  myLot() { return this.lots ? this.lots.findIndex(l => l.h?.owner === this.myName) : -1; }
+  lotOwner(i) { return this.lots?.[i]?.h?.owner || null; }
+  buildHouse(lot, style, wall, roof) {
+    this.houseWish = lot;
+    this.net.send({ t: 'house', lot, style, wall, roof });
+  }
+  goHome() {
+    const i = this.myLot();
+    if (i >= 0) this.goTo('🏡 Dein Haus', lotFront(i).x, lotFront(i).z, 0);
+  }
+
   // Rucksack: eigenes Fahrzeug hervorholen bzw. Deko hinstellen (nur draussen in der Stadt)
   outdoors() {
     if (this.gameKey === 'town' && !this.adv) return true;
@@ -1612,7 +1655,7 @@ export class Game {
     this.lastSend = 0;
   }
 
-  goTo(name, x, z) {
+  goTo(name, x, z, face = Math.PI) {
     if (this.carriedBy != null) return;
     if (this.driving) this.exitVehicle();
     if (this.carrying != null) this.net.send({ t: 'putdown' });
@@ -1620,7 +1663,7 @@ export class Game {
     const fade = $('fade');
     fade.classList.add('on');
     setTimeout(() => {
-      this.teleport(x, Math.max(0.15, this.phys.surfaceAt(x, z, 30) + 0.05) || 0.15, z, Math.PI);
+      this.teleport(x, Math.max(0.15, this.phys.surfaceAt(x, z, 30) + 0.05) || 0.15, z, face);
       fade.classList.remove('on');
       this.notice(`📍 ${name}`, 1800);
     }, 220);

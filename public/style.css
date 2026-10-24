@@ -406,3 +406,9 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .bigmsg, .notice { border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
 .bigmsg h2 { font-family: "Fredoka", "Nunito", system-ui, sans-serif; }
 .preview { background: linear-gradient(180deg, #c9eeff 0%, #fff4c8 100%); border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+/* Haus bauen: Grundstücke wählen */
+.lot-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 6px 0 4px; }
+.lot-grid .lot { padding: 10px 0; border-radius: 12px; border: 2px solid var(--ink); background: #c3ecb2; font-weight: 900; font-size: 16px; color: var(--ink); }
+.lot-grid .lot.on { background: var(--sun); box-shadow: 0 0 0 3px var(--cherry); }
+.lot-grid .lot.taken { background: #e0dbe9; color: #8a7fa0; }
+#dialogCard .color-dots { margin: 4px 0 8px; }

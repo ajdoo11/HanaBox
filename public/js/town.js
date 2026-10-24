@@ -832,7 +832,7 @@ export function makeTown() {
     ['🌳 Park & See', -120, 42], ['🤸 Trampolinpark', -60, 42], ['🚗 Fahrzeuge', 0, 42], ['🌈 Obby-Turm', 106, 76],
     ['🧗 Kletterhaus', -60, -106], ['🌿 Irrgarten', 0, -96], ['🚒 Feuerwehr', 120, -102], ['🏎️ Kart-Bahn', 120, -38],
     ['🌀 Labyrinth-Haus', -60, 104], ['⏰ Abenteuer-Haus', 0, 104], ['🐄 Bauernhof', 110, 140], ['🏖️ Strand & ✈️ Flughafen', 0, G + 7],
-    ['🛍️ Einkaufsstrasse', 0, -236], ['🎡 Hana-Land', -190, 284], ['🏊 Schwimmbad', -60, 274], ['🐰 Streichelzoo', 70, 274], ['⚽ Sportplatz', 200, 272], ['🔥 Lagerfeuer', 255, 24], ['⛺ Pfadi-Lager', -255, -24],
+    ['🛍️ Einkaufsstrasse', 0, -236], ['🏡 Eigene Häuser', 0, -198], ['🎡 Hana-Land', -190, 284], ['🏊 Schwimmbad', -60, 274], ['🐰 Streichelzoo', 70, 274], ['⚽ Sportplatz', 200, 272], ['🔥 Lagerfeuer', 255, 24], ['⛺ Pfadi-Lager', -255, -24],
   ];
 
   // Flughafen am Strand

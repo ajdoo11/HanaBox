@@ -1,6 +1,6 @@
 // Startseite, Avatar & Shop, Verbindung und Spielstart.
 import * as THREE from 'three';
-import { GAMES, AVATAR_OPTIONS, SHOP, VEHICLES, VEH_COLORS, ITEM_TYPES, ITEM_INDEX, PRICES, QUICK_CHAT, EMOJIS, EMOJI_BASE, sanitizeAvatar, sanitizeName } from './shared.js';
+import { GAMES, AVATAR_OPTIONS, SHOP, HOUSE_LOTS, HOUSE_STYLES, HOUSE_WALLS, HOUSE_ROOFS, VEHICLES, VEH_COLORS, ITEM_TYPES, ITEM_INDEX, PRICES, QUICK_CHAT, EMOJIS, EMOJI_BASE, sanitizeAvatar, sanitizeName } from './shared.js';
 import { Character } from './avatar.js';
 import { Input } from './input.js';
 import { Game } from './game.js';
@@ -420,6 +420,14 @@ function shopRow(label, owned, price, useLabel, onUse, onBuy) {
 }
 function renderBag(body) {
   body.append(el('h3', { textContent: `⭐ ${profile.stars} Sterne` }));
+  body.append(el('h3', { textContent: '🏡 Häuser' }));
+  const mine = game.myLot();
+  if (mine >= 0) body.append(el('button', { className: 'row-btn', textContent: `🚶 Zu meinem Haus (Nr. ${mine + 1})`, onclick: () => { closePhone(); game.goHome(); } }));
+  else body.append(el('p', { textContent: 'Kauf ein Haus und bau es auf einem freien Grundstück im Norden der Stadt.' }));
+  HOUSE_STYLES.forEach((s, i) => {
+    const id = 'house:' + s.key;
+    body.append(shopRow(`${s.emoji} ${s.name}`, ownsShop(id), s.price, mine >= 0 ? 'Umbauen' : 'Bauen', () => houseDialog(i), () => buyShop(id, s.price)));
+  });
   body.append(el('h3', { textContent: '🚗 Fahrzeuge' }));
   const colors = el('div', { className: 'color-dots' });
   VEH_COLORS.forEach((c, i) => colors.append(el('button', { className: i === profile.vehColor ? 'on' : '', style: `background:${c}`, ariaLabel: `Farbe ${i + 1}`, onclick: () => { saveVehColor(i); renderPhone(); } })));
@@ -439,6 +447,40 @@ function renderBag(body) {
     const mine = profile.avatar.pet === i;
     const setPet = pet => { const a = { ...profile.avatar, pet }; saveAvatar(a); game.setMyAvatar(a); renderPhone(); };
     body.append(shopRow(name, owns('pet', i), PRICES.pet[i] || 0, mine ? 'Nach Hause' : 'Mitnehmen', () => setPet(mine ? 0 : i), () => buy('pet', i)));
+  });
+}
+
+// Haus bauen: Farben und Grundstück wählen. Hat man schon ein Haus, wird es umgebaut oder zieht um.
+function houseDialog(style) {
+  closePhone();
+  const mine = game.myLot();
+  const cur = game.lots[mine]?.h;
+  let wall = cur?.wall ?? 0, roof = cur?.roof ?? 0;
+  let lot = mine >= 0 ? mine : HOUSE_LOTS.findIndex((_, i) => !game.lotOwner(i));
+  dialog((card, close) => {
+    const dots = (list, now, set) => {
+      const d = el('div', { className: 'color-dots' });
+      list.forEach((c, i) => d.append(el('button', { className: i === now ? 'on' : '', style: `background:${c}`, ariaLabel: `Farbe ${i + 1}`, onclick: () => { set(i); render(); } })));
+      return d;
+    };
+    const render = () => {
+      const s = HOUSE_STYLES[style];
+      card.replaceChildren(el('h2', { textContent: `${s.emoji} ${s.name} bauen` }),
+        el('b', { textContent: '🎨 Wände' }), dots(HOUSE_WALLS, wall, i => { wall = i; }),
+        el('b', { textContent: '🏠 Dach' }), dots(HOUSE_ROOFS, roof, i => { roof = i; }),
+        el('b', { textContent: '📍 Grundstück (1 = ganz im Westen)' }));
+      const grid = el('div', { className: 'lot-grid' });
+      HOUSE_LOTS.forEach((_, i) => {
+        const owner = game.lotOwner(i), taken = !!owner && owner !== game.myName;
+        grid.append(el('button', { className: 'lot' + (i === lot ? ' on' : '') + (taken ? ' taken' : ''), disabled: taken, textContent: taken ? `${i + 1} 🔒` : `${i + 1}`, onclick: () => { lot = i; render(); } }));
+      });
+      card.append(grid);
+      if (lot < 0) card.append(el('p', { textContent: '😢 Alle Grundstücke sind schon besetzt.' }));
+      card.append(el('div', { className: 'row' },
+        el('button', { className: 'btn primary', textContent: '🔨 Bauen!', disabled: lot < 0, onclick: () => { close(); game.buildHouse(lot, style, wall, roof); } }),
+        el('button', { className: 'btn', textContent: 'Abbrechen', onclick: close })));
+    };
+    render();
   });
 }
 

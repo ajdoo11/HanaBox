@@ -1,5 +1,5 @@
 // Spiel-Server-Kern: Räume, Bots und Spielregeln. Läuft im Node-Server und – ohne Server (z.B. GitHub Pages) – direkt im Browser.
-import { GAMES, MAX_PLAYERS, BLOCK_TYPES, BUILD, ITEM_TYPES, ITEM_INDEX, MAX_ITEMS, VEHICLES, sanitizeAvatar, sanitizeName, validChat, ANIMS, vehDecode } from './shared.js';
+import { GAMES, MAX_PLAYERS, BLOCK_TYPES, BUILD, ITEM_TYPES, ITEM_INDEX, MAX_ITEMS, VEHICLES, sanitizeAvatar, sanitizeName, validChat, ANIMS, vehDecode, HOUSE_LOTS, HOUSE_STYLES, HOUSE_WALLS, HOUSE_ROOFS } from './shared.js';
 import { WORLDS } from './worlds.js';
 import { townCellAllowed, LAND_DEFS } from './lands.js';
 import { Bot, randomAvatar, worldPhysics } from './bots.js';
@@ -30,7 +30,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
       this.phys = worldPhysics(game);
       if (game === 'build') { this.blocks = new Map(); this.load(); }
       if (game === 'town') {
-        this.items = new Map(); this.itemSeq = 1; this.toggles = {}; this.blocks = new Map(); this.loadTown();
+        this.items = new Map(); this.itemSeq = 1; this.toggles = {}; this.blocks = new Map(); this.houses = new Map(); this.loadTown();
         for (const sb of WORLDS.town.staticBots) this.addStaticBot(sb);
       }
       if (game === 'coins') { this.coins = new Map(); this.coinSeq = 1; this.round = null; this.respawnAt = []; }
@@ -151,6 +151,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
         for (const [, type, x, y, z] of data.items || []) this.addItem(type, x, y, z, null);
         this.toggles = data.toggles || {};
         for (const [bx, by, bz, k] of data.blocks || []) this.blocks.set(`${bx},${by},${bz}`, [bx, by, bz, k]);
+        for (const [lot, h] of data.houses || []) if (HOUSE_LOTS[lot] && h?.owner) this.houses.set(lot, h);
       } else {
         for (const [key, x, y, z] of WORLDS.town.items) this.addItem(ITEM_INDEX[key], x, y, z, null);
       }
@@ -169,7 +170,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
       if (this.game === 'build') storage.write('build', this.code, { blocks: [...this.blocks.values()] });
       if (this.game === 'town') {
         const items = [...this.items.values()].map(([id, type, x, y, z]) => [id, type, x, y, z, null]);
-        storage.write('town', this.code, { v: 2, items, toggles: this.toggles, blocks: [...this.blocks.values()] });
+        storage.write('town', this.code, { v: 2, items, toggles: this.toggles, blocks: [...this.blocks.values()], houses: [...this.houses] });
       }
     }
     dropAll(p) {
@@ -184,7 +185,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     extra() {
       const carry = [...this.allEntities()].filter(e => e.carrying != null).map(e => [e.id, e.carrying]);
       if (this.game === 'build') return { blocks: [...this.blocks.values()] };
-      if (this.game === 'town') return { items: [...this.items.values()], toggles: this.toggles, blocks: [...this.blocks.values()], carry };
+      if (this.game === 'town') return { items: [...this.items.values()], toggles: this.toggles, blocks: [...this.blocks.values()], houses: [...this.houses], carry };
       if (this.game === 'coins') return { coins: [...this.coins.values()], round: this.round, carry };
       if (this.game === 'tag') return { it: this.it, round: this.round, carry };
       return { carry };
@@ -324,7 +325,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     room.players.set(p.id, p);
     room.syncBots();
     send(client.ws, {
-      t: 'welcome', id: p.id, code: room.code, game: room.game, now: Date.now(),
+      t: 'welcome', id: p.id, name: p.name, code: room.code, game: room.game, now: Date.now(),
       players: [...room.allEntities()].filter(e => e !== p).map(x => room.pub(x)), extra: room.extra(), bots: room.botsEnabled,
     });
     room.broadcast({ t: 'join', player: room.pub(p) }, p);
@@ -492,6 +493,22 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
         room.toggles[m.key] = !room.toggles[m.key];
         room.broadcast({ t: 'toggle', key: m.key, on: room.toggles[m.key] });
         room.saveSoon();
+        break;
+      }
+      case 'house': { // eigenes Haus bauen, umbauen oder umziehen (der Haustyp wurde mit Sternen im Rucksack gekauft)
+        if (room.game !== 'town') return;
+        const ok = (v, n) => Number.isInteger(v) && v >= 0 && v < n;
+        if (!ok(m.lot, HOUSE_LOTS.length) || !ok(m.style, HOUSE_STYLES.length) || !ok(m.wall, HOUSE_WALLS.length) || !ok(m.roof, HOUSE_ROOFS.length)) return;
+        if (now - (client.lastHouse || 0) < 2000) return;
+        const cur = room.houses.get(m.lot);
+        if (cur && cur.owner !== p.name) return send(p.ws, { t: 'notice', text: '🏡 Dieses Grundstück gehört schon jemandem.' });
+        client.lastHouse = now;
+        for (const [lot, h] of room.houses) if (h.owner === p.name && lot !== m.lot) { room.houses.delete(lot); room.broadcast({ t: 'house', lot, h: null }); }
+        const h = { owner: p.name, style: m.style, wall: m.wall, roof: m.roof };
+        room.houses.set(m.lot, h);
+        room.broadcast({ t: 'house', lot: m.lot, h });
+        room.saveSoon();
+        log(`${p.name} baut ein Haus auf Grundstück ${m.lot + 1}`);
         break;
       }
       case 'grab': {

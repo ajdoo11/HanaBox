@@ -190,6 +190,18 @@ export const SHOP = {
     { key: 'gnome', price: 8 }, { key: 'lantern', price: 10 }, { key: 'palm', price: 15 }, { key: 'snowman', price: 20 }],
 };
 
+// Eigene Häuser: Grundstücke im Norden der Hana-Stadt an der Ringstrasse (Haustür zur Strasse).
+// Jeder Spieler hat höchstens ein Haus; den Haustyp kauft man einmal im Rucksack (gespeichert als «house:cottage» …).
+export const HOUSE_LOTS = [-128, -108, -72, -48, -12, 12, 48, 72, 108, 128, 172, 192].map(x => ({ x, z: -185 }));
+export const HOUSE_STYLES = [
+  { key: 'cottage', name: 'Häuschen', emoji: '🛖', price: 40 },
+  { key: 'family', name: 'Familienhaus', emoji: '🏠', price: 70 },
+  { key: 'villa', name: 'Villa', emoji: '🏡', price: 110 },
+  { key: 'castle', name: 'Schlösschen', emoji: '🏰', price: 150 },
+];
+export const HOUSE_WALLS = ['#ffd8c2', '#fff3a8', '#c3ecb2', '#b5e3ff', '#e5c8ff', '#ffd59e', '#ffc2dc', '#ffffff'];
+export const HOUSE_ROOFS = ['#e03131', '#9c5b34', '#1c7ed6', '#2f9e44', '#d6336c', '#7048e8'];
+
 export const ITEM_INDEX = Object.fromEntries(ITEM_TYPES.map((t, i) => [t.key, i]));
 export const MAX_ITEMS = 250;
 
