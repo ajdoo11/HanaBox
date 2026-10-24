@@ -10,7 +10,7 @@ Stand: 2026-10-24. Diese Datei ist der Fahrplan. Wenn die Sitzung ein Limit erre
 
 ## Aufgaben
 - [x] 1. Bus: fährt auf der Ringstrasse, Position aus der Uhrzeit (alle sehen ihn am gleichen Ort), 4 Haltestellen, einsteigen/aussteigen. Logik im Test geprüft. Offen: Bus-Aussehen am Bildschirm bestätigen, Mitfahrende anderer Spieler sind noch nicht sichtbar.
-- [ ] 2. Handy (☰-Menü → 📱 Handy, kein neuer Knopf am Spielfeldrand): Karte, Selfie, Freunde, Sterne, Profil.
+- [x] 2. Handy (☰-Menü → 📱 Handy): Reiter Karte (Orte und Reisen), Selfie, Freunde (mit Grün=online), Sterne. Im Test geöffnet und alle Reiter geprüft. Offen: Profil-Reiter.
 - [ ] 3. Rucksack: Gegenstände (Autos, Deko, Tiere) gegen Sterne kaufen, eigenes Inventar.
 - [ ] 4. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler aufgebaut (Stadt-Parzellen).
 - [ ] 5. Autos und Tiere besser darstellen (Modelle, Farben, Animationen).
