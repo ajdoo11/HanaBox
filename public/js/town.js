@@ -94,6 +94,9 @@ export function makeTown() {
     pois.push({ x: cx + 8, z: cz + 8, act: 'idle' }, { x: cx, z: cz - 15, y: 1, act: 'dance' }, { x: cx - 8, z: cz - 8, act: 'wave' }, { x: cx + 13, z: cz + 13, act: 'idle' }, { x: cx - 14, z: cz + 4, act: 'idle' });
   }
 
+  // ---------- Bushaltestellen an der Ringstrasse ----------
+  for (const [x, z] of [[217.5, 0], [0, 217.5], [-217.5, 0], [0, -217.5]]) K.signPost('🚌 Bushaltestelle', x, z, 'z+', '#ffe082', '#e65100', 7);
+
   // ---------- Skulpturen der Kinder am Stadtplatz ----------
   {
     const statue = (x, z, kid) => {

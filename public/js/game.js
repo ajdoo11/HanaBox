@@ -7,6 +7,7 @@ import { Character } from './avatar.js';
 import { BuildWorld, blockIcon } from './build.js';
 import { makeItemMesh } from './items.js';
 import { makeVehicle, spinWheels, SEATS } from './vehicles.js';
+import { busPose, makeBusMesh } from './bus.js';
 import { buildStatic, partGeometry, makeMaterial, signMesh, ringMesh, ringMaterial, skyDome } from './geo.js';
 import { getTexture } from './textures.js';
 import { addStars, saveAvatar, earnWork, jobWait, markJob, workLeft, WORK_DAILY } from './profile.js';
@@ -100,6 +101,7 @@ export class Game {
     this.rockets = [];
     this.riding = null;
     this.petMenu = false;
+    this.onBus = false;
     try { this.friends = new Set(JSON.parse(localStorage.getItem('hb_friends') || '[]')); } catch { this.friends = new Set(); }
     this.pose = null;
     this.held = null;
@@ -266,6 +268,7 @@ export class Game {
     // Falls der Himmel einmal nicht gezeichnet wird: hell statt schwarz
     this.scene.background = horizon.clone();
     this.makeSnow();
+    if (this.gameKey === 'town') { this.busMesh = makeBusMesh(); this.scene.add(this.busMesh); }
     this.scene.add(new THREE.HemisphereLight('#ffffff', '#8aa07a', 1.15));
     const sun = new THREE.DirectionalLight('#fff4dc', 1.9);
     sun.castShadow = true;
@@ -1448,7 +1451,7 @@ export class Game {
 
   // ---------- Fahrzeuge ----------
   enterVehicle(type, color, part) {
-    if (this.driving || this.carriedBy != null || this.riding != null) return;
+    if (this.driving || this.carriedBy != null || this.riding != null || this.onBus) return;
     if (this.held != null) this.dropItem();
     if (this.carrying != null) this.net.send({ t: 'putdown' });
     const V = VEHICLES[type];
@@ -1613,7 +1616,9 @@ export class Game {
   updateActions() {
     const el = $('actions');
     const list = [];
-    if (this.riding != null) {
+    if (this.onBus) {
+      list.push(['🚌 Bus verlassen', () => this.leaveBus()]);
+    } else if (this.riding != null) {
       list.push(['🚪 Absteigen', () => this.leaveRide()]);
     } else if (this.driving) {
       list.push(['🚪 Aussteigen', () => this.exitVehicle()]);
@@ -1643,6 +1648,10 @@ export class Game {
       }
       const myPet = this.pets.get(this.myId);
       if (myPet && this.petMenu && this.held == null && list.length < 3) list.push([myPet.rest ? '🐾 Tier zurückrufen' : '🏠 Tier hier ablegen', () => this.togglePetRest()]);
+      if (this.busMesh && !this.driving && this.riding == null) {
+        const b = busPose((Date.now() + this.timeOffset) / 1000);
+        if (Math.hypot(b.x - this.body.p.x, b.z - this.body.p.z) < 9) list.unshift(['🚌 Bus einsteigen', () => this.boardBus()]);
+      }
       const ride = !this.driving && this.nearestRideable();
       if (ride) list.unshift([`🪑 ${ride.name} mitfahren`, () => this.net.send({ t: 'ride', id: ride.id })]);
       const lad = !this.body.climbing && !this.autoClimb && this.nearestLadder();
@@ -1993,6 +2002,17 @@ export class Game {
       return;
     }
 
+    // Im Bus: man fährt mit, bis man aussteigt
+    if (this.onBus) {
+      const b = busPose((Date.now() + this.timeOffset) / 1000);
+      p.x = b.x; p.z = b.z; p.y = 0.9;
+      this.body.v.x = this.body.v.y = this.body.v.z = 0;
+      this.facing = b.rot;
+      this.anim = 'idle';
+      this.finishChar(dt, 0);
+      return;
+    }
+
     // Mitfahren: man sitzt beim Fahrer und hat keine eigene Steuerung
     if (this.riding != null) {
       const d = this.remotes.get(this.riding);
@@ -2276,6 +2296,35 @@ export class Game {
     }
   }
 
+  updateBus() {
+    if (!this.busMesh) return;
+    const b = busPose((Date.now() + this.timeOffset) / 1000);
+    this.busMesh.position.set(b.x, 0, b.z);
+    this.busMesh.rotation.y = b.rot;
+  }
+
+  setBusSeeThrough(on) {
+    if (!this.busMesh) return;
+    const m = this.busMesh.userData.body.material;
+    m.transparent = on; m.opacity = on ? 0.35 : 1; m.depthWrite = !on; m.needsUpdate = true;
+  }
+
+  boardBus() {
+    this.onBus = true;
+    this.setBusSeeThrough(true);
+    this.notice('🚌 Der Bus fährt los! „Bus verlassen“ zum Aussteigen', 2800);
+    sfx('pop');
+  }
+
+  leaveBus() {
+    const b = busPose((Date.now() + this.timeOffset) / 1000);
+    const p = this.body.p;
+    p.x = b.x - Math.cos(b.rot) * 3.6; p.z = b.z + Math.sin(b.rot) * 3.6; p.y = 0.2;
+    this.body.v.x = this.body.v.y = this.body.v.z = 0;
+    this.onBus = false;
+    this.setBusSeeThrough(false);
+  }
+
   toggleFriend(name) {
     if (this.friends.has(name)) { this.friends.delete(name); this.notice(`${name} ist kein Freund mehr`, 2000); }
     else { this.friends.add(name); this.notice(`⭐ ${name} ist jetzt dein Freund – du findest ihn schneller!`, 2600); sfx('magic'); }
@@ -2435,6 +2484,7 @@ export class Game {
     this.updateLocal(dt, t);
     this.updateRemotes(dt);
     this.updateFriendTags();
+    this.updateBus();
     this.updateGameRules(dt, t);
     this.updateCamera(dt);
     this.handleTaps();
