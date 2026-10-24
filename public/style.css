@@ -453,3 +453,11 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 }
 #hud.dressing .notice { top: 13%; left: 27%; max-width: 46vw; }
 @media (orientation: portrait) { #hud.dressing .notice { top: 9%; left: 50%; max-width: 90vw; } }
+/* Sterne verschenken (Eltern-Konto) */
+.gift-info { font-weight: 700; margin: 4px 0 10px; }
+.gift-list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; }
+.gift-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; background: #fff; border: 2px solid var(--ink); border-radius: 14px; }
+.gift-name { font-weight: 900; flex: 1 1 120px; }
+.gift-stars { font-weight: 900; color: #b8860b; min-width: 64px; }
+.gift-btns { display: flex; gap: 4px; }
+.gift-btns .btn.small { padding: 6px 10px; font-size: 14px; border: 2px solid var(--ink); }

@@ -117,12 +117,51 @@ function updateMeCard() {
 window.addEventListener('myavatar', updateMeCard);
 $('meCard').onclick = () => { $('btnPhone').click(); };
 
+// ---------- Sterne verschenken (nur Eltern-Konto) ----------
+let isAdmin = false;
+function openGift() {
+  dialog((card, close) => {
+    const title = el('h2', { textContent: '🎁 Sterne verschenken' });
+    const info = el('p', { className: 'gift-info', textContent: 'Lädt alle Spieler …' });
+    const box = el('div', { className: 'gift-list' });
+    card.append(title, info, box, el('div', { className: 'row' }, el('button', { className: 'btn', textContent: 'Schliessen', onclick: close })));
+    const render = async () => {
+      let list;
+      try { list = (await Account.adminPlayers()).players; } catch (e) { info.textContent = e.message; return; }
+      list.sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name, 'de'));
+      if (info.dataset.done !== '1') info.textContent = `${list.length} Spieler · 🟢 = spielt gerade (bekommt die Sterne sofort)`;
+      box.replaceChildren();
+      for (const p of list) {
+        const btns = el('span', { className: 'gift-btns' });
+        for (const n of [5, 10, 20, 50]) {
+          btns.append(el('button', { className: 'btn small buy', textContent: `+${n}`, onclick: async e => {
+            e.currentTarget.disabled = true;
+            try {
+              const r = await Account.adminGift(p.name, n);
+              info.dataset.done = '1';
+              info.textContent = r.live ? `✅ ${p.name} hat ${n} ⭐ bekommen.` : `✅ ${p.name} bekommt ${n} ⭐ beim nächsten Spielstart.`;
+            } catch (err) { info.textContent = err.message; }
+            render();
+          } }));
+        }
+        box.append(el('div', { className: 'gift-row' },
+          el('span', { className: 'gift-name', textContent: `${p.online ? '🟢' : '⚪'} ${p.name}` }),
+          el('span', { className: 'gift-stars', textContent: `⭐ ${p.stars}${p.pending ? ` +${p.pending}` : ''}` }),
+          btns));
+      }
+    };
+    render();
+  });
+}
+$('btnGift').onclick = openGift;
+
 // ---------- Startseite ----------
 function showMenu() {
   $('menu').hidden = false;
   $('avatarScreen').hidden = true;
   $('helloName').textContent = profile.name || 'du';
   $('btnAccountLogout').hidden = !Account.token();
+  $('btnGift').hidden = !isAdmin;
   showStars();
   renderRecent();
   renderMini();
@@ -703,6 +742,7 @@ async function boot() {
     const me = await Account.check();
     if (me?.reload) { location.replace(location.pathname); return; }
     if (!me) { showAuth('login'); return; }
+    isAdmin = !!me.admin;
     $('authScreen').hidden = true;
     showMenu();
   } catch {

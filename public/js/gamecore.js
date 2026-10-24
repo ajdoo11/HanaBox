@@ -6,7 +6,7 @@ import { Bot, randomAvatar, worldPhysics } from './bots.js';
 
 // storage: { read(kind, code), write(kind, code, data), exists(kind, code) } mit kind = 'build' | 'town'
 // authenticate(token): liefert das Konto ({ name }) – ohne diese Funktion (im Browser) wählt man den Namen selbst
-export function createGameCore({ storage, log = () => {}, authenticate = null }) {
+export function createGameCore({ storage, log = () => {}, authenticate = null, takeGift = null }) {
   // ---------- Räume ----------
   const rooms = new Map();
   // Alle spielen zusammen in derselben Welt
@@ -379,6 +379,9 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     room.broadcast({ t: 'join', player: room.pub(p) }, p);
     client.room = room;
     client.player = p;
+    // Sterne, die jemand verschenkt hat, während das Kind nicht gespielt hat
+    const gift = account && takeGift ? takeGift(account) : 0;
+    if (gift) send(client.ws, { t: 'gift', n: gift });
     log(`${name} → Raum ${room.code} (${GAMES[room.game].name}), ${room.players.size} Spieler`);
   }
 
@@ -725,5 +728,15 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
 
     function saveAll() { for (const room of rooms.values()) if (room.game === 'town' || room.game === 'build') room.save(); }
 
-  return { connect, message, disconnect, rooms, saveAll };
+  // Für das Eltern-Konto: wer spielt gerade, und Sterne direkt ins laufende Spiel schicken
+  function onlineNames() { return [...rooms.values()].flatMap(r => [...r.players.values()].map(p => p.name)); }
+  function giftTo(name, n, from) {
+    const low = String(name).toLowerCase();
+    for (const r of rooms.values()) for (const p of r.players.values()) {
+      if (p.name.toLowerCase() === low && p.ws.readyState === 1) { send(p.ws, { t: 'gift', n, from }); return true; }
+    }
+    return false;
+  }
+
+  return { connect, message, disconnect, rooms, saveAll, onlineNames, giftTo };
 }

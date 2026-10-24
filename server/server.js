@@ -110,6 +110,24 @@ const server = http.createServer(async (req, res) => {
     if (!p) return jsonRes(res, 400, { error: 'Ungültig' });
     return accounts.setProfile(bearer(req), p) ? jsonRes(res, 200, { ok: true }) : jsonRes(res, 401, { error: 'Nicht angemeldet' });
   }
+  // ---------- Sterne verschenken (nur Eltern-Konto) ----------
+  const admin = accounts.byToken(bearer(req));
+  if (url === '/api/admin/players' && req.method === 'GET') {
+    if (!accounts.isAdmin(admin)) return jsonRes(res, 403, { error: 'Nur für das Eltern-Konto' });
+    const online = new Set(core.onlineNames().map(n => n.toLowerCase()));
+    return jsonRes(res, 200, { players: accounts.list().map(p => ({ ...p, online: online.has(p.name.toLowerCase()) })) });
+  }
+  if (url === '/api/admin/gift' && req.method === 'POST') {
+    if (!accounts.isAdmin(admin)) return jsonRes(res, 403, { error: 'Nur für das Eltern-Konto' });
+    const b = await readBody(req);
+    const n = Number(b?.n);
+    if (!Number.isInteger(n) || n < 1 || n > 500 || !accounts.has(b?.name)) return jsonRes(res, 400, { error: 'Ungültig' });
+    // Spielt das Kind gerade, kommen die Sterne sofort an, sonst beim nächsten Spielstart
+    const live = core.giftTo(b.name, n, admin.name);
+    if (!live) accounts.addGift(b.name, n);
+    log(`${admin.name} schenkt ${b.name} ${n} Sterne${live ? '' : ' (beim nächsten Spielstart)'}`);
+    return jsonRes(res, 200, { ok: true, live });
+  }
   if (url === '/api/logout' && req.method === 'POST') {
     accounts.logout(bearer(req));
     return jsonRes(res, 200, { ok: true });
@@ -125,6 +143,7 @@ const server = http.createServer(async (req, res) => {
 const core = createGameCore({
   log,
   authenticate: token => accounts.byToken(token),
+  takeGift: account => accounts.takeGift(account),
   storage: {
     read: (kind, code) => worlds.get(worldId(kind, code)) ?? null,
     write(kind, code, data) { worlds.set(worldId(kind, code), data); store.set('worlds', worldId(kind, code), data); },

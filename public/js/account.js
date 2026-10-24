@@ -75,12 +75,16 @@ export async function check() {
     if (me.profile && me.profile.t > (Number(ls.get(STAMP)) || 0)) { restore(me.profile, me.name); return { name: me.name, reload: true }; }
     if (!me.profile) upload();
     ls.set(NAME, me.name);
-    return { name: me.name };
+    return { name: me.name, admin: !!me.admin };
   } catch (e) {
     if (e.status === 401) { ls.del(TOKEN); return null; }
     throw e;
   }
 }
+
+// Eltern-Konto: alle Spieler sehen und Sterne verschenken
+export const adminPlayers = () => api('/api/admin/players');
+export const adminGift = (name, n) => api('/api/admin/gift', { method: 'POST', body: JSON.stringify({ name, n }) });
 
 export async function logout() {
   await upload();

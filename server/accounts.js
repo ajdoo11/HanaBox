@@ -5,6 +5,9 @@ import { sanitizeName } from '../public/js/shared.js';
 
 const NAME_RE = /^[\p{L}\p{N} _-]{3,14}$/u;
 const sha = t => crypto.createHash('sha256').update(t).digest('hex');
+// Wer Sterne verschenken darf (Eltern-Konto). Auf dem Server änderbar mit HANABLOX_ADMINS=name1,name2
+const ADMINS = new Set((process.env.HANABLOX_ADMINS || 'test').toLowerCase().split(',').map(s => s.trim()).filter(Boolean));
+const starsOf = a => { try { const n = JSON.parse(a.profile?.data?.hb_stars ?? 'null'); return Number.isFinite(n) ? n : 20; } catch { return 20; } };
 const hashPw = (pass, salt) => crypto.scryptSync(pass, salt, 32).toString('hex');
 
 export async function createAccounts(store) {
@@ -29,7 +32,7 @@ export async function createAccounts(store) {
     return token;
   }
 
-  const pub = a => ({ name: a.name, profile: a.profile || null });
+  const pub = a => ({ name: a.name, profile: a.profile || null, admin: ADMINS.has(a.name.toLowerCase()) });
 
   return {
     count: () => byId.size,
@@ -65,6 +68,26 @@ export async function createAccounts(store) {
       const a = byId.get(id);
       a.tokens = a.tokens.filter(t => t !== h);
       save(id);
+    },
+    isAdmin: a => !!a && ADMINS.has(a.name.toLowerCase()),
+    // Alle angemeldeten Spieler mit ihren Sternen (für das Eltern-Konto)
+    list() {
+      return [...byId.values()].map(a => ({ name: a.name, stars: starsOf(a), pending: a.pendingStars || 0, last: a.profile?.t || a.created || 0 }));
+    },
+    // Geschenk für jemanden, der gerade nicht spielt: wird beim nächsten Spielstart gutgeschrieben
+    addGift(name, n) {
+      const id = String(name ?? '').toLowerCase();
+      const a = byId.get(id);
+      if (!a) return false;
+      a.pendingStars = (a.pendingStars || 0) + n;
+      save(id);
+      return true;
+    },
+    has: name => byId.has(String(name ?? '').toLowerCase()),
+    takeGift(a) {
+      const n = a?.pendingStars || 0;
+      if (n) { a.pendingStars = 0; save(a.name.toLowerCase()); }
+      return n;
     },
     setProfile(token, profile) {
       const a = this.byToken(token);
