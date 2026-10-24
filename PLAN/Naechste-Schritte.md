@@ -9,7 +9,7 @@ Stand: 2026-10-24. Diese Datei ist der Fahrplan. Wenn die Sitzung ein Limit erre
 - Keine Glücksspiel-Mechanik (kein Ei-Gacha) für Kinder.
 
 ## Aufgaben
-- [ ] 1. Bus: fährt auf einer festen Route durch die Hana-Stadt, Haltestellen, man steigt ein und fährt mit (Mitfahr-System wiederverwenden).
+- [x] 1. Bus: fährt auf der Ringstrasse, Position aus der Uhrzeit (alle sehen ihn am gleichen Ort), 4 Haltestellen, einsteigen/aussteigen. Logik im Test geprüft. Offen: Bus-Aussehen am Bildschirm bestätigen, Mitfahrende anderer Spieler sind noch nicht sichtbar.
 - [ ] 2. Handy (☰-Menü → 📱 Handy, kein neuer Knopf am Spielfeldrand): Karte, Selfie, Freunde, Sterne, Profil.
 - [ ] 3. Rucksack: Gegenstände (Autos, Deko, Tiere) gegen Sterne kaufen, eigenes Inventar.
 - [ ] 4. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler aufgebaut (Stadt-Parzellen).
