@@ -31,7 +31,7 @@ export class Outline {
       uniforms: {
         tColor: { value: this.rt.texture }, tDepth: { value: this.rt.depthTexture },
         texel: { value: new THREE.Vector2() }, near: { value: 0.1 }, far: { value: 500 },
-        thick: { value: 1.5 }, ink: { value: new THREE.Color('#2a1630') }, sat: { value: 1.3 },
+        thick: { value: 1.5 }, ink: { value: new THREE.Color('#2a1630') }, sat: { value: 1.25 },
         fade: { value: new THREE.Vector2(70, 170) },
       },
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',

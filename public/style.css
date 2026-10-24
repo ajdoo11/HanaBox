@@ -403,3 +403,5 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .phone-body .btn.buy { background: var(--sun); }
 .phone-body .row-btn .btn.small { border: 2px solid var(--ink); box-shadow: 0 2px 0 var(--ink); }
 .spinner { border-color: #ffe9a8; border-top-color: var(--cherry); }
+.bigmsg, .notice { border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+.bigmsg h2 { font-family: "Fredoka", "Nunito", system-ui, sans-serif; }

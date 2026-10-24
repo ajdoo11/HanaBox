@@ -35,8 +35,8 @@ const DRAW = {
   grass: [6, (ctx, S) => {
     ctx.fillStyle = '#e6e6e6'; ctx.fillRect(0, 0, S, S);
     const r = rnd(3);
-    ctx.strokeStyle = 'rgba(0,0,0,0.13)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    for (let i = 0; i < 14; i++) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (let i = 0; i < 9; i++) {
       const x = r() * S, y = r() * S;
       ctx.beginPath(); ctx.moveTo(x - 5, y - 6); ctx.lineTo(x, y); ctx.lineTo(x + 5, y - 7); ctx.stroke();
     }

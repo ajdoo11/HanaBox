@@ -272,8 +272,8 @@ export class Game {
     this.makeSnow();
     if (this.gameKey === 'town') { this.busMesh = makeBusMesh(); this.scene.add(this.busMesh); }
     // Trickfilm-Licht: warme Sonne, Schattenseiten leicht violett statt grau
-    this.scene.add(new THREE.HemisphereLight('#fff8ec', '#9c8cc4', 1.05));
-    const sun = new THREE.DirectionalLight('#ffefc8', 2.3);
+    this.scene.add(new THREE.HemisphereLight('#ffffff', '#a39ad0', 1.05));
+    const sun = new THREE.DirectionalLight('#fff7e6', 2.2);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     this.renderer.shadowMap.autoUpdate = false;
@@ -2548,9 +2548,8 @@ export class Game {
     if (level === q.level) return;
     q.level = level;
     const shadows = level < 2;
-    // Umrisslinien: erst ohne Kantenglättung, auf sehr langsamen Geräten ganz aus
+    // Umrisslinien bleiben immer (gehören zum Look), auf langsamen Geräten ohne Kantenglättung
     this.post.setSamples(level >= 2 ? 0 : null);
-    this.post.enabled = level < 3;
     if (this.sun.castShadow !== shadows) { this.sun.castShadow = shadows; this.renderer.shadowMap.needsUpdate = true; }
     const far = level >= 3 ? 260 : 420;
     if (this.scene.fog) { this.scene.fog.far = far; this.scene.fog.near = far * 0.3; }
