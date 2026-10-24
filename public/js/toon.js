@@ -53,6 +53,7 @@ export class Outline {
           float edge = smoothstep(0.03, 0.09, e / c);
           edge *= 1.0 - smoothstep(fade.x, fade.y, 1.0 / c);
           col.rgb = mix(col.rgb, ink, edge * 0.92);
+          col.a = max(col.a, edge * 0.92); // Vorschau mit durchsichtigem Hintergrund: Umriss auch aussen sichtbar
           gl_FragColor = col;
           #include <tonemapping_fragment>
           #include <colorspace_fragment>

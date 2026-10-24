@@ -32,10 +32,18 @@ Diese Datei ist für die nächste Sitzung. Lies sie zuerst, dann `PLAN/Naechste-
 - Automatische Wiederverbindung bei Verbindungsabbruch.
 - Schärfe: Auflösung bis 2x, Schatten flimmern weniger, Schnee auf der Grafikkarte.
 
+## Neue Grafik (Trickfilm-Look, seit 24.10.)
+- `public/js/toon.js`: `toonMat()` ersetzt überall MeshLambertMaterial (3 harte Licht-Stufen). `Outline` zeichnet das Bild in eine Textur, zieht dunkle Umrisse an Tiefen-Kanten und macht die Farben kräftiger (Sättigung 1.25). Wird im Spiel (`game.post`) und in der Avatar-Vorschau benutzt.
+- Langsame Geräte: `adaptQuality` schaltet erst die Kantenglättung der Umrisse ab; die Umrisse selbst bleiben immer an.
+- Licht: neutrale Sonne, violette Schattenseiten; Tonemapping Neutral (statt ACES, das hat die Farben ausgewaschen).
+- Figuren und Fahrzeuge stark abgerundet, Figuren mit runden Händen. Texturen ruhig/flach.
+- Oberfläche: Schrift Fredoka (Google Fonts), dicke dunkle Ränder (`--ink`), Himmel-Hintergrund im Menü, gelbes Handy.
+- Stil ist eigenständig: keine Simpsons-Figuren, keine gelbe Haut, kein Logo.
+
 ## 4. Offen (Reihenfolge, siehe PLAN/Naechste-Schritte.md)
 1. ~~Rucksack-Shop~~ erledigt (noch auf Render deployen).
 2. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler gebaut, Preis 40–150 Sterne.
-3. Großes Redesign in Etappen E1–E7 (Oberfläche, Farben/Schrift, Figuren, Tiere, Länder, Gebäude, Gesamttest). Plan steht in Naechste-Schritte.md. Noch NICHT begonnen.
+3. Großes Redesign: HAT VORRANG (Wunsch vom 24.10.). Teil 1+2 erledigt (siehe unten «Neue Grafik»). Offen: Gebäude/Bäume runder und bunter, Tiere-Modelle, Leistungstest auf echtem iPad/Handy.
 4. Bus: Mitfahrende anderer Spieler sind noch nicht sichtbar; Bus-Aussehen am Bildschirm bestätigen.
 5. Sterne-Deckel und Arbeitswartezeit sind nur im Gerät. Auf Wunsch serverseitig machen. Gilt auch für Rucksack-Käufe (Server prüft Besitz nicht).
 

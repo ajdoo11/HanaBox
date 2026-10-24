@@ -14,8 +14,11 @@ Stand: 2026-10-24. Diese Datei ist der Fahrplan. Wenn die Sitzung ein Limit erre
 - [x] 3. Rucksack (Handy → Reiter 🎒 Rucksack): Fahrzeuge 10–60 ⭐ (mit Farbwahl, «Fahren» holt es überall draussen in der Stadt hervor), Deko 2–20 ⭐ («Hinstellen», danach «🤲 Hinlegen»), Tiere (Preise wie im Avatar-Shop, «Mitnehmen»). Einmal gekauft = für immer. Im Test gekauft, gefahren, Deko hingestellt.
 - [ ] 4. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler aufgebaut (Stadt-Parzellen).
 - [ ] 5. Autos und Tiere besser darstellen (Modelle, Farben, Animationen).
-- [ ] 6. Gesamtbild: Farben, Schrift, Symbole eigenständig gestalten; danach alle Layouts auf Handy/iPad prüfen.
+- [x] 6. Gesamtbild (Teil 1+2, 24.10.): Cel-Shading, Umrisslinien, kräftige Farben, runde Figuren/Fahrzeuge, Comic-Oberfläche. Layout auf Handy und PC geprüft. Offen: Gebäude/Bäume, echter iPad-Leistungstest.
 - [ ] 7. Hochladen: git push, Render "Manual Deploy" → "Deploy latest commit".
+
+## Reihenfolge (Wunsch vom 24.10.)
+- Zuerst die neue Grafik fertig machen, danach Häuser kaufen und die übrigen Punkte.
 
 ## Regeln
 - Jeder Schritt wird einzeln committet und getestet, bevor der nächste beginnt.

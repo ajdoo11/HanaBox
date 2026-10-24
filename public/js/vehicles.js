@@ -6,7 +6,9 @@ import { VEHICLES, VEH_COLORS } from './shared.js';
 import { mergeChildren } from './merge.js';
 
 const cache = new Map();
+// Trickfilm-Look: Karosserie-Teile kräftig abgerundet
 const RB = (w, h, d, r = 0.1) => {
+  r = Math.max(r, Math.min(w, h, d) * 0.3);
   const k = `${w},${h},${d},${r}`;
   if (!cache.has(k)) cache.set(k, new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001)));
   return cache.get(k);

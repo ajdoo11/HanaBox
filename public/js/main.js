@@ -4,6 +4,7 @@ import { GAMES, AVATAR_OPTIONS, SHOP, VEHICLES, VEH_COLORS, ITEM_TYPES, ITEM_IND
 import { Character } from './avatar.js';
 import { Input } from './input.js';
 import { Game } from './game.js';
+import { Outline } from './toon.js';
 import { unlockAudio, sfx, setMuted } from './sfx.js';
 import { profile, saveName, saveAvatar, saveMuted, saveGrab, addRecent, removeRecent, workLeft, WORK_DAILY, owns, buy, ownsShop, buyShop, saveVehColor } from './profile.js';
 import { avatarEditor, ALL_TABS } from './editor.js';
@@ -67,7 +68,7 @@ function makePreview(canvas, size) {
   sun.position.set(3, 5, 6);
   scene.add(sun);
   const cam = new THREE.PerspectiveCamera(size ? 30 : 32, 1, 0.1, 50);
-  return { r, scene, cam, char: null, size };
+  return { r, scene, cam, char: null, size, post: new Outline(r) };
 }
 const mini = makePreview($('miniAvatar'), 96);
 const big = makePreview($('avatarCanvas'));
@@ -81,6 +82,7 @@ function setPreviewAvatar(pv) {
 function renderMini() {
   setPreviewAvatar(mini);
   mini.r.setSize(96, 96, false);
+  mini.post.setSize();
   mini.cam.aspect = 1;
   const y = 2.45;
   mini.cam.position.set(0, y + 0.15, 3.0);
@@ -88,7 +90,7 @@ function renderMini() {
   mini.cam.updateProjectionMatrix();
   mini.char.root.rotation.y = 0.35;
   mini.char.update(0.016, 'idle');
-  mini.r.render(mini.scene, mini.cam);
+  mini.post.render(mini.scene, mini.cam);
 }
 function bigLoop(now) {
   if (!bigRunning) return;
@@ -96,14 +98,14 @@ function bigLoop(now) {
   const c = $('avatarCanvas');
   const w = c.clientWidth, h = c.clientHeight;
   if (!w || !h) return;
-  if (c.width !== Math.floor(w * big.r.getPixelRatio())) big.r.setSize(w, h, false);
+  if (c.width !== Math.floor(w * big.r.getPixelRatio())) { big.r.setSize(w, h, false); big.post.setSize(); }
   big.cam.aspect = w / h;
   big.cam.position.set(0, 2.0, 9);
   big.cam.lookAt(0, 1.5, 0);
   big.cam.updateProjectionMatrix();
   big.char.root.rotation.y = Math.sin(now / 1600) * 0.7;
   big.char.update(1 / 60, (now / 3000) % 4 < 1 ? 'wave' : 'idle');
-  big.r.render(big.scene, big.cam);
+  big.post.render(big.scene, big.cam);
 }
 
 // ---------- Startseite ----------
