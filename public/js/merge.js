@@ -1,8 +1,9 @@
 // Fasst viele kleine einfarbige Teile einer Gruppe zu einem einzigen Mesh zusammen (viel schneller zu zeichnen).
 import * as THREE from 'three';
+import { toonMat } from './toon.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-export const vcMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+export const vcMaterial = toonMat({ vertexColors: true });
 const tmpColor = new THREE.Color();
 
 function mergeable(o) {

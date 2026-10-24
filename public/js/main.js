@@ -23,8 +23,8 @@ const renderer = new THREE.WebGLRenderer({ canvas: $('view'), antialias: true, p
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.05;
 renderer.setSize(innerWidth, innerHeight, false);
 
 const input = new Input($('view'), $('joyBase'), $('joyKnob'), $('btnJump'));

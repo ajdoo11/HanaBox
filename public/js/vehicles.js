@@ -1,5 +1,6 @@
 // Fahrzeug-Modelle: Cabrio, Jeep, Kart, Velo, Trotti. Ursprung = Boden-Mitte, vorne = +z.
 import * as THREE from 'three';
+import { toonMat } from './toon.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { VEHICLES, VEH_COLORS } from './shared.js';
 import { mergeChildren } from './merge.js';
@@ -18,7 +19,7 @@ const CYL = new THREE.CylinderGeometry(1, 1, 1, 12);
 const mats = new Map();
 const M = (c, extra) => {
   const k = c + JSON.stringify(extra || {});
-  if (!mats.has(k)) mats.set(k, new THREE.MeshLambertMaterial({ color: c, ...extra }));
+  if (!mats.has(k)) mats.set(k, toonMat({ color: c, ...extra }));
   return mats.get(k);
 };
 

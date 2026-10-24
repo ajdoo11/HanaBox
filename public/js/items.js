@@ -1,5 +1,6 @@
 // Niedliche 3D-Modelle für Gegenstände in der Hana-Stadt. Ursprung = Unterkante.
 import * as THREE from 'three';
+import { toonMat } from './toon.js';
 import { ITEM_TYPES } from './shared.js';
 import { mergeChildren } from './merge.js';
 
@@ -14,7 +15,7 @@ const G = {
 const matCache = new Map();
 function mat(c, emissive) {
   const k = c + (emissive || '');
-  if (!matCache.has(k)) matCache.set(k, new THREE.MeshLambertMaterial(emissive ? { color: c, emissive, emissiveIntensity: 0.4 } : { color: c }));
+  if (!matCache.has(k)) matCache.set(k, toonMat(emissive ? { color: c, emissive, emissiveIntensity: 0.4 } : { color: c }));
   return matCache.get(k);
 }
 

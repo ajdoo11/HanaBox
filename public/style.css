@@ -361,3 +361,45 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .color-dots button { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #cfc6e6; }
 .color-dots button.on { box-shadow: 0 0 0 3px #7c4dff; }
 .phone-top .btn.small { color: #2b2140; }
+
+/* ---------- Trickfilm-Design: dicke dunkle Ränder, harte Schatten, kräftige Farben, runde Comic-Schrift ---------- */
+:root { --ink: #2a1630; --sun: #ffd23f; --sky: #3fb8ff; --leaf: #5ccb3c; --cherry: #ff4d6d; }
+.logo, .topbar .title, .hello, .card h2, .game-card h3, .btn, .hbtn, .phone-top, .phone-tabs button, .phone-body h3, .tabs button {
+  font-family: "Fredoka", "Nunito", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+.screen {
+  background:
+    radial-gradient(ellipse 120px 44px at 14% 82%, #fff 98%, transparent 100%),
+    radial-gradient(ellipse 86px 38px at 20% 78%, #fff 98%, transparent 100%),
+    radial-gradient(ellipse 140px 50px at 84% 58%, #fff 98%, transparent 100%),
+    radial-gradient(ellipse 100px 44px at 78% 54%, #fff 98%, transparent 100%),
+    linear-gradient(180deg, #3fb8ff 0%, #8fdcff 62%, #ffe27a 100%);
+  background-attachment: fixed;
+}
+.logo { color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); letter-spacing: 0; }
+.logo span { color: var(--sun); }
+.topbar .title, .hello, .screen h2.section { color: #fff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--ink); }
+.btn, .star-chip { border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); }
+.screen h2.section { font-family: "Fredoka", "Nunito", system-ui, sans-serif; }
+.btn:active { box-shadow: 0 2px 0 var(--ink); }
+.btn.primary { background: var(--cherry); }
+.btn.pink { background: #ff7ab6; }
+.game-card { border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+.game-card .thumb { background: linear-gradient(180deg, #ffe27a, #ffb347) !important; }
+.join-box, .options, .card { border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+.join-box input, .field input, .card input.name { border-color: var(--ink); }
+.tabs button { border: 2px solid var(--ink); }
+.tabs button.on { background: var(--cherry); }
+.opt-grid .opt.on, .opt-grid .sw.on { box-shadow: 0 0 0 4px var(--cherry); border-color: var(--cherry); }
+.overlay { background: rgba(42,22,48,0.5); }
+.hbtn { background: #fff; }
+.hbtn.phone-btn { background: var(--sky); }
+.phone-card { background: #ffd23f; border: 4px solid var(--ink); box-shadow: 0 8px 0 var(--ink); color: var(--ink); }
+.phone-tabs button { background: #fff; color: var(--ink); border: 2px solid var(--ink); }
+.phone-tabs button.on { background: var(--cherry); color: #fff; }
+.phone-body { border: 3px solid var(--ink); background: #fffaf0; }
+.phone-body .row-btn { border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.phone-body .btn.use { background: var(--sky); color: #fff; }
+.phone-body .btn.buy { background: var(--sun); }
+.phone-body .row-btn .btn.small { border: 2px solid var(--ink); box-shadow: 0 2px 0 var(--ink); }
+.spinner { border-color: #ffe9a8; border-top-color: var(--cherry); }

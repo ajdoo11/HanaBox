@@ -1,6 +1,7 @@
 // Welt-Renderer: baut aus den Teilen wenige zusammengefasste Meshes (schnell auf dem Tablet),
 // mit Texturen, die sich an der Weltgrösse ausrichten, sowie Schildern mit Schrift.
 import * as THREE from 'three';
+import { toonMat } from './toon.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { getTexture } from './textures.js';
 
@@ -82,7 +83,7 @@ export function makeMaterial(p) {
   }
   if (p.emissive) Object.assign(o, { emissive: p.emissive, emissiveIntensity: p.emissiveIntensity ?? 0.8 });
   if (p.opacity) Object.assign(o, { transparent: true, opacity: p.opacity, depthWrite: false });
-  return new THREE.MeshLambertMaterial(o);
+  return toonMat(o);
 }
 
 // Gegen Flackern (Z-Fighting): Liegen zwei verschieden aussehende Flächen (fast) auf derselben Höhe übereinander,

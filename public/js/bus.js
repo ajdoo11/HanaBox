@@ -1,6 +1,7 @@
 // Stadtbus: fährt auf der Ringstrasse, langsamer an den Haltestellen. Die Position kommt aus der Uhrzeit,
 // deshalb sehen alle Spieler den Bus am gleichen Ort, ohne dass er übertragen werden muss.
 import * as THREE from 'three';
+import { toonMat } from './toon.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export const BUS = { R: 210, speed: 13, slow: 4, stopZone: 18 };
@@ -48,7 +49,7 @@ export function routePoint(s) {
 
 export function makeBusMesh() {
   const g = new THREE.Group();
-  const paint = (c, e = {}) => new THREE.MeshLambertMaterial({ color: c, ...e });
+  const paint = (c, e = {}) => toonMat({ color: c, ...e });
   const body = new THREE.Mesh(new RoundedBoxGeometry(4.4, 3.4, 10.5, 4, 0.7), paint('#ffc83d'));
   body.position.y = 2.4;
   body.castShadow = true;

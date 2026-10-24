@@ -1,5 +1,6 @@
 // Bauwelt: Klötze effizient zeichnen (InstancedMesh) und mit der Physik verbinden.
 import * as THREE from 'three';
+import { toonMat } from './toon.js';
 import { BLOCK_TYPES, BUILD } from './shared.js';
 import { makeBox, PLAYER } from './physics.js';
 import { getTexture } from './textures.js';
@@ -14,7 +15,7 @@ export function blockMaterial(t) {
   if (t.kind === 'glow') Object.assign(opts, { emissive: t.color, emissiveIntensity: 0.8 });
   if (t.kind === 'lava') Object.assign(opts, { emissive: '#ff3d00', emissiveIntensity: 0.6 });
   if (t.kind === 'bounce') Object.assign(opts, { emissive: '#00bcd4', emissiveIntensity: 0.25 });
-  return new THREE.MeshLambertMaterial(opts);
+  return toonMat(opts);
 }
 
 // Vorschaubild eines Klotzes für die Bau-Leiste (echtes Muster statt nur Farbe)

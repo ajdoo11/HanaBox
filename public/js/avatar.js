@@ -1,13 +1,16 @@
-// Figur im Roblox-Stil (abgerundete Klötze) mit Gesicht, Frisuren, Kleidung, Hüten, Accessoires.
+// Trickfilm-Figur (weich abgerundete Formen, grosser Kopf) mit Gesicht, Frisuren, Kleidung, Hüten, Accessoires.
 import * as THREE from 'three';
+import { toonMat } from './toon.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { AVATAR_OPTIONS, DEFAULT_AVATAR } from './shared.js';
 import { mergeTree } from './merge.js';
 
 const geoCache = new Map();
+// Trickfilm-Figur: alle Teile stark abgerundet (weich wie Knetmasse)
 function RB(w, h, d, r = 0.08) {
+  r = Math.max(r, Math.min(w, h, d) * 0.42);
   const k = `rb${w},${h},${d},${r}`;
-  if (!geoCache.has(k)) geoCache.set(k, new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001)));
+  if (!geoCache.has(k)) geoCache.set(k, new RoundedBoxGeometry(w, h, d, 4, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001)));
   return geoCache.get(k);
 }
 const SPHERE = new THREE.SphereGeometry(1, 18, 12);
@@ -176,7 +179,7 @@ function drawShirt(ctx, a, back) {
   if (!back && style !== 7 && style !== 9) { ctx.fillStyle = dark; ctx.beginPath(); ctx.ellipse(64, 0, 22, 12, 0, 0, Math.PI); ctx.fill(); }
 }
 
-function lam(c, extra = {}) { return new THREE.MeshLambertMaterial({ color: c, ...extra }); }
+function lam(c, extra = {}) { return toonMat({ color: c, ...extra }); }
 
 export class Character {
   constructor(avatar, name, opts = {}) {
@@ -245,7 +248,7 @@ export class Character {
     // Rumpf mit Shirt-Bild
     const front = this.m('#ffffff', { map: this.canvasTex(128, 128, ctx => drawShirt(ctx, a, false)) });
     const back = this.m('#ffffff', { map: this.canvasTex(128, 128, ctx => drawShirt(ctx, a, true)) });
-    const torso = new THREE.Mesh(RB(1.0, 1.0, 0.52, 0.1), [shirt, shirt, shirt, shirt, front, back]);
+    const torso = new THREE.Mesh(RB(1.0, 1.0, 0.56, 0.24), [shirt, shirt, shirt, shirt, front, back]);
     torso.position.y = 1.55;
     torso.castShadow = true;
     b.add(torso);
@@ -265,6 +268,7 @@ export class Character {
       this.rb(0.42, 0.5, 0.44, shirt, 0, -0.22, 0, arm);
       this.rb(0.38, 0.52, 0.4, a.sleeve === 1 ? shirt : skin, 0, -0.68, 0, arm);
       if (a.sleeve === 1) this.rb(0.36, 0.16, 0.38, skin, 0, -0.98, 0, arm, 0.06);
+      this.part(SPHERE, 0.21, 0.2, 0.21, skin, 0, -1.02, 0, arm);
     }
     // Kopf
     const head = new THREE.Group();
@@ -273,7 +277,7 @@ export class Character {
     this.head = head;
     const faceTex = this.canvasTex(256, 256, ctx => drawFace(ctx, a.face, a.skin, AVATAR_OPTIONS.eyes[a.eyes] || '#5d4037'));
     const faceM = this.m('#ffffff', { map: faceTex });
-    const hm = new THREE.Mesh(RB(0.8, 0.76, 0.74, 0.16), [skin, skin, skin, skin, faceM, skin]);
+    const hm = new THREE.Mesh(RB(0.84, 0.8, 0.78, 0.3), [skin, skin, skin, skin, faceM, skin]);
     hm.position.y = 0.4;
     hm.castShadow = true;
     head.add(hm);
@@ -385,7 +389,7 @@ export class Character {
     ctx.fillText(text, c.width / 2, h / 2 + 2);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true }));
     sp.renderOrder = 999;
     return { sprite: sp, aspect: c.width / c.height };
   }

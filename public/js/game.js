@@ -1,5 +1,6 @@
 // Die laufende Spielwelt: 3D-Szene, eigener Spieler, andere Spieler/Bots, Fahrzeuge, Häuser und Spielregeln.
 import * as THREE from 'three';
+import { toonMat, Outline } from './toon.js';
 import { WORLDS } from './worlds.js';
 import { GAMES, BLOCK_TYPES, ANIMS, ITEM_TYPES, ITEM_INDEX, VEHICLES, PETS, chatText, vehCode, vehDecode } from './shared.js';
 import { Physics, Body, makeBox, makeRamp, PLAYER, SEA } from './physics.js';
@@ -52,6 +53,7 @@ function fmtTime(ms) {
 export class Game {
   constructor({ renderer, input, net, welcome, name, avatar, onLeave }) {
     this.renderer = renderer;
+    this.post = new Outline(renderer);
     this.input = input;
     this.net = net;
     this.onLeave = onLeave;
@@ -151,7 +153,7 @@ export class Game {
 
   // ---------- Aufbau ----------
   setSky(color) {
-    const horizon = new THREE.Color(color).lerp(new THREE.Color('#ffffff'), 0.45);
+    const horizon = new THREE.Color(color).lerp(new THREE.Color('#ffffff'), 0.3);
     const top = new THREE.Color(color).multiplyScalar(0.8);
     this.sky.material.uniforms.top.value.copy(top);
     this.sky.material.uniforms.bottom.value.copy(horizon);
@@ -259,7 +261,7 @@ export class Game {
 
   setupScene() {
     const d = this.def;
-    const horizon = new THREE.Color(d.sky).lerp(new THREE.Color('#ffffff'), 0.45);
+    const horizon = new THREE.Color(d.sky).lerp(new THREE.Color('#ffffff'), 0.3);
     const top = new THREE.Color(d.sky).multiplyScalar(0.8);
     this.sky = skyDome(top, horizon);
     this.scene.add(this.sky);
@@ -269,8 +271,9 @@ export class Game {
     this.scene.background = horizon.clone();
     this.makeSnow();
     if (this.gameKey === 'town') { this.busMesh = makeBusMesh(); this.scene.add(this.busMesh); }
-    this.scene.add(new THREE.HemisphereLight('#ffffff', '#8aa07a', 1.15));
-    const sun = new THREE.DirectionalLight('#fff4dc', 1.9);
+    // Trickfilm-Licht: warme Sonne, Schattenseiten leicht violett statt grau
+    this.scene.add(new THREE.HemisphereLight('#fff8ec', '#9c8cc4', 1.05));
+    const sun = new THREE.DirectionalLight('#ffefc8', 2.3);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     this.renderer.shadowMap.autoUpdate = false;
@@ -293,7 +296,7 @@ export class Game {
     if (this.def.goal) {
       const [gx, gy, gz] = this.def.goal;
       const geo = new THREE.OctahedronGeometry(1.4);
-      const mat = new THREE.MeshLambertMaterial({ color: '#ffd700', emissive: '#ffab00', emissiveIntensity: 0.6 });
+      const mat = toonMat({ color: '#ffd700', emissive: '#ffab00', emissiveIntensity: 0.6 });
       this.disposables.push(geo, mat);
       this.trophy = new THREE.Mesh(geo, mat);
       this.trophy.position.set(gx, gy + 5, gz - 4);
@@ -313,7 +316,7 @@ export class Game {
     if (this.gameKey === 'coins') {
       this.coinGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.16, 20);
       this.coinGeo.rotateX(Math.PI / 2);
-      this.coinMat = new THREE.MeshLambertMaterial({ color: '#ffd54f', emissive: '#ff8f00', emissiveIntensity: 0.45 });
+      this.coinMat = toonMat({ color: '#ffd54f', emissive: '#ff8f00', emissiveIntensity: 0.45 });
       this.disposables.push(this.coinGeo, this.coinMat);
     }
   }
@@ -2524,7 +2527,7 @@ export class Game {
     }
     this.sendState(now);
     this.updateRockets(dt);
-    this.renderer.render(this.scene, this.camera);
+    this.post.render(this.scene, this.camera);
     if (this.photoReq) this.finishPhoto();
   };
 
@@ -2545,6 +2548,9 @@ export class Game {
     if (level === q.level) return;
     q.level = level;
     const shadows = level < 2;
+    // Umrisslinien: erst ohne Kantenglättung, auf sehr langsamen Geräten ganz aus
+    this.post.setSamples(level >= 2 ? 0 : null);
+    this.post.enabled = level < 3;
     if (this.sun.castShadow !== shadows) { this.sun.castShadow = shadows; this.renderer.shadowMap.needsUpdate = true; }
     const far = level >= 3 ? 260 : 420;
     if (this.scene.fog) { this.scene.fog.far = far; this.scene.fog.near = far * 0.3; }
@@ -2557,6 +2563,7 @@ export class Game {
   onResize = () => {
     const w = innerWidth, h = innerHeight;
     this.renderer.setSize(w, h, false);
+    this.post.setSize();
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   };
@@ -2576,6 +2583,7 @@ export class Game {
     for (const r of this.remotes.values()) r.char.dispose();
     for (const e of this.effects) e.m.material.dispose();
     this.build?.dispose();
+    this.post.dispose();
     for (const d of this.disposables) d.dispose();
     this.scene.traverse(o => { if (o.isMesh && o.geometry && !o.geometry.parameters) { /* geteilte Geometrien bleiben */ } });
     $('hud').hidden = true;
