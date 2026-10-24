@@ -21,7 +21,9 @@ Diese Datei ist für die nächste Sitzung. Lies sie zuerst, dann `PLAN/Naechste-
 - Joystick fest unten links, Kamera folgt der Laufrichtung.
 - Mitfahren: Beifahrer bei Auto/Jeep/Boot (Server-Logik `ride`/`unride` in gamecore.js).
 - Stadtbus: fährt auf der Ringstrasse (public/js/bus.js), Position aus der Uhrzeit, 4 Haltestellen. Einsteigen über Knopf in der Aktionsleiste.
-- Handy: Knopf 📱 oben links → Karte (Orte, Reisen), Selfie, Freunde (grün = online), Sterne.
+- Handy: Knopf 📱 oben links → Karte (Orte, Reisen), Rucksack, Selfie, Freunde (grün = online), Sterne.
+- Rucksack-Shop (Reiter 🎒 im Handy): Fahrzeuge, Deko, Tiere gegen Sterne. Katalog `SHOP` in shared.js, Kauf `buyShop` in profile.js (gespeichert in `hb_owned`, also im Konto). Neue Deko-Modelle: Sonnenblume, Laterne, Schneemann, Mini-Palme, Gartenzwerg.
+- Fehlende 3D-Modelle ergänzt (Schneeball, Wasserballon, Frisbee, Drachen, Schildkröte, Delfin, Schmetterling, Hamster waren unsichtbar). Handy-Schliessen-Knopf wieder lesbar.
 - Freunde: in der Spielerliste (oben rechts, aufklappen) auf einen Namen tippen. Ihr Name erscheint über ihnen.
 - Tier: Menü nur nach Antippen des Tieres (Ablegen/Zurückrufen).
 - Arbeit: Tagesdeckel 90 Sterne, Arbeitsplatz 2 Minuten gesperrt (client-seitig, siehe Hinweis unten).
@@ -31,11 +33,11 @@ Diese Datei ist für die nächste Sitzung. Lies sie zuerst, dann `PLAN/Naechste-
 - Schärfe: Auflösung bis 2x, Schatten flimmern weniger, Schnee auf der Grafikkarte.
 
 ## 4. Offen (Reihenfolge, siehe PLAN/Naechste-Schritte.md)
-1. Rucksack-Shop: Autos, Deko, Tiere gegen Sterne (Preise moderat, siehe Plan).
+1. ~~Rucksack-Shop~~ erledigt (noch auf Render deployen).
 2. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler gebaut, Preis 40–150 Sterne.
 3. Großes Redesign in Etappen E1–E7 (Oberfläche, Farben/Schrift, Figuren, Tiere, Länder, Gebäude, Gesamttest). Plan steht in Naechste-Schritte.md. Noch NICHT begonnen.
 4. Bus: Mitfahrende anderer Spieler sind noch nicht sichtbar; Bus-Aussehen am Bildschirm bestätigen.
-5. Sterne-Deckel und Arbeitswartezeit sind nur im Gerät. Auf Wunsch serverseitig machen.
+5. Sterne-Deckel und Arbeitswartezeit sind nur im Gerät. Auf Wunsch serverseitig machen. Gilt auch für Rucksack-Käufe (Server prüft Besitz nicht).
 
 ## 5. Code-Orte (Schnellübersicht)
 - `public/js/game.js`: Spiel-Hauptklasse (Bewegung, Fahrzeuge, Mitfahren, Bus, Handy-Anbindung, Freunde, Schnee, Kamera).

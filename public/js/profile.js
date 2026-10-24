@@ -14,6 +14,7 @@ export const profile = {
   recent: store.get('recent', []),
   muted: store.get('muted', false),
   grab: store.get('grab', true),
+  vehColor: store.get('vehcolor', 0),
 };
 
 export function saveGrab(g) { profile.grab = g; store.set('grab', g); }
@@ -71,6 +72,18 @@ export function buy(kind, i) {
   addStars(-p);
   return true;
 }
+
+// Rucksack-Shop: Kauf mit Sternen, gespeichert als «veh:2», «deco:lantern» …
+export function ownsShop(id) { return profile.owned.has(id); }
+export function buyShop(id, p) {
+  if (profile.owned.has(id)) return true;
+  if (profile.stars < p) return false;
+  profile.owned.add(id);
+  store.set('owned', [...profile.owned]);
+  addStars(-p);
+  return true;
+}
+export function saveVehColor(c) { profile.vehColor = c; store.set('vehcolor', c); }
 
 export function addRecent(code, game) {
   profile.recent = [{ code, game, t: Date.now() }, ...profile.recent.filter(r => r.code !== code)].slice(0, 6);

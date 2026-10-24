@@ -170,6 +170,11 @@ export const ITEM_TYPES = [
   { key: 'dolphin', name: 'Delfin', emoji: '🐬', cat: 'pet' },
   { key: 'butterfly', name: 'Schmetterling', emoji: '🦋', cat: 'pet' },
   { key: 'hamster', name: 'Hamster', emoji: '🐹', cat: 'pet' },
+  { key: 'sunflower', name: 'Sonnenblume', emoji: '🌻', cat: 'plant' },
+  { key: 'lantern', name: 'Laterne', emoji: '🏮', cat: 'deco' },
+  { key: 'snowman', name: 'Schneemann', emoji: '⛄', cat: 'deco' },
+  { key: 'palm', name: 'Mini-Palme', emoji: '🌴', cat: 'plant' },
+  { key: 'gnome', name: 'Gartenzwerg', emoji: '🍄', cat: 'deco' },
 ];
 
 // Eigene Haustiere (folgen dir überall hin). Preis in Sternen.
@@ -177,6 +182,14 @@ export const PETS = [
   { key: 'cat', price: 0 }, { key: 'dog', price: 0 }, { key: 'bunny', price: 15 }, { key: 'chick', price: 15 },
   { key: 'penguin', price: 40 }, { key: 'parrot', price: 40 }, { key: 'fox', price: 70 }, { key: 'unicorn', price: 120 },
 ];
+// Rucksack-Shop (nur Sterne). Einmal gekauft, gehört es dir für immer.
+// Fahrzeuge: Index in VEHICLES. Deko: Gegenstand zum Hinstellen. Tiere: Index in AVATAR_OPTIONS.pet (Preis aus PRICES.pet).
+export const SHOP = {
+  veh: [{ type: 4, price: 10 }, { type: 3, price: 15 }, { type: 2, price: 35 }, { type: 0, price: 50 }, { type: 1, price: 60 }],
+  deco: [{ key: 'flower', price: 2 }, { key: 'balloon', price: 3 }, { key: 'sunflower', price: 4 }, { key: 'gift', price: 5 }, { key: 'teddy', price: 6 },
+    { key: 'gnome', price: 8 }, { key: 'lantern', price: 10 }, { key: 'palm', price: 15 }, { key: 'snowman', price: 20 }],
+};
+
 export const ITEM_INDEX = Object.fromEntries(ITEM_TYPES.map((t, i) => [t.key, i]));
 export const MAX_ITEMS = 250;
 

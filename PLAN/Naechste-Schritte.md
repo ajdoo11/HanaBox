@@ -11,7 +11,7 @@ Stand: 2026-10-24. Diese Datei ist der Fahrplan. Wenn die Sitzung ein Limit erre
 ## Aufgaben
 - [x] 1. Bus: fährt auf der Ringstrasse, Position aus der Uhrzeit (alle sehen ihn am gleichen Ort), 4 Haltestellen, einsteigen/aussteigen. Logik im Test geprüft. Offen: Bus-Aussehen am Bildschirm bestätigen, Mitfahrende anderer Spieler sind noch nicht sichtbar.
 - [x] 2. Handy (☰-Menü → 📱 Handy): Reiter Karte (Orte und Reisen), Selfie, Freunde (mit Grün=online), Sterne. Im Test geöffnet und alle Reiter geprüft. Offen: Profil-Reiter.
-- [ ] 3. Rucksack: Gegenstände (Autos, Deko, Tiere) gegen Sterne kaufen, eigenes Inventar.
+- [x] 3. Rucksack (Handy → Reiter 🎒 Rucksack): Fahrzeuge 10–60 ⭐ (mit Farbwahl, «Fahren» holt es überall draussen in der Stadt hervor), Deko 2–20 ⭐ («Hinstellen», danach «🤲 Hinlegen»), Tiere (Preise wie im Avatar-Shop, «Mitnehmen»). Einmal gekauft = für immer. Im Test gekauft, gefahren, Deko hingestellt.
 - [ ] 4. Häuser kaufen: Grundstück wählen, Haus wird für den Spieler aufgebaut (Stadt-Parzellen).
 - [ ] 5. Autos und Tiere besser darstellen (Modelle, Farben, Animationen).
 - [ ] 6. Gesamtbild: Farben, Schrift, Symbole eigenständig gestalten; danach alle Layouts auf Handy/iPad prüfen.

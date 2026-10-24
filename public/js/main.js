@@ -1,11 +1,11 @@
 // Startseite, Avatar & Shop, Verbindung und Spielstart.
 import * as THREE from 'three';
-import { GAMES, AVATAR_OPTIONS, QUICK_CHAT, EMOJIS, EMOJI_BASE, sanitizeAvatar, sanitizeName } from './shared.js';
+import { GAMES, AVATAR_OPTIONS, SHOP, VEHICLES, VEH_COLORS, ITEM_TYPES, ITEM_INDEX, PRICES, QUICK_CHAT, EMOJIS, EMOJI_BASE, sanitizeAvatar, sanitizeName } from './shared.js';
 import { Character } from './avatar.js';
 import { Input } from './input.js';
 import { Game } from './game.js';
 import { unlockAudio, sfx, setMuted } from './sfx.js';
-import { profile, saveName, saveAvatar, saveMuted, saveGrab, addRecent, removeRecent, workLeft, WORK_DAILY } from './profile.js';
+import { profile, saveName, saveAvatar, saveMuted, saveGrab, addRecent, removeRecent, workLeft, WORK_DAILY, owns, buy, ownsShop, buyShop, saveVehColor } from './profile.js';
 import { avatarEditor, ALL_TABS } from './editor.js';
 import * as Account from './account.js';
 import { SERVER_URL } from './config.js';
@@ -371,7 +371,7 @@ $('gmBots').onclick = () => { botsOn = !botsOn; net?.send({ t: 'bots', on: botsO
 $('gmBotCount').oninput = () => { $('gmBotCountLabel').textContent = $('gmBotCount').value; };
 $('gmBotCount').onchange = () => { const c = Number($('gmBotCount').value); localStorage.setItem('hana_botCount', c); net?.send({ t: 'bots', on: botsOn, count: c }); };
 // Handy: Karte, Selfie, Freunde und Sterne – öffnet sich über das ☰-Menü
-const PHONE_TABS = [['map', '🗺️ Karte'], ['selfie', '📸 Selfie'], ['friends', '⭐ Freunde'], ['stars', '⭐ Sterne']];
+const PHONE_TABS = [['map', '🗺️ Karte'], ['bag', '🎒 Rucksack'], ['selfie', '📸 Selfie'], ['friends', '⭐ Freunde'], ['stars', '⭐ Sterne']];
 let phoneTab = 'map';
 function openPhone() { $('gameMenu').hidden = true; $('phone').hidden = false; renderPhone(); }
 function closePhone() { $('phone').hidden = true; }
@@ -388,6 +388,8 @@ function renderPhone() {
     for (const [name, x, z] of game.def.destinations?.[land.key] || []) body.append(el('button', { className: 'row-btn', textContent: name, onclick: () => { closePhone(); game.goTo(name, x, z); } }));
     body.append(el('h3', { textContent: '✈️ Reisen' }));
     for (const l of game.def.lands || []) body.append(el('button', { className: 'row-btn', textContent: `${l.emoji} ${l.name}`, onclick: () => { closePhone(); game.travel(l); } }));
+  } else if (phoneTab === 'bag') {
+    renderBag(body);
   } else if (phoneTab === 'selfie') {
     body.append(el('p', { textContent: 'Mach ein Foto von dir mit allen, die gerade in der Nähe sind. Danach kannst du es speichern.' }));
     body.append(el('button', { className: 'row-btn', textContent: '📸 Selfie machen', onclick: () => { closePhone(); game.takePhoto(); } }));
@@ -402,6 +404,42 @@ function renderPhone() {
     body.append(el('h3', { textContent: `⭐ ${profile.stars} Sterne` }), el('p', { textContent: `Arbeits-Sterne heute: noch ${workLeft()} von ${WORK_DAILY}.` }));
   }
 }
+
+// Rucksack: Fahrzeuge, Deko und Tiere mit Sternen kaufen, danach jederzeit benutzen
+function shopRow(label, owned, price, useLabel, onUse, onBuy) {
+  const btn = owned
+    ? el('button', { className: 'btn small use', textContent: useLabel, onclick: onUse })
+    : el('button', { className: 'btn small buy' + (profile.stars < price ? ' poor' : ''), textContent: `⭐ ${price}`, onclick: () => {
+      if (!onBuy()) { game?.notice(`⭐ Dafür brauchst du ${price} Sterne. Arbeite in einem Laden!`, 3000); return; }
+      game?.notice('🎒 Gekauft! Es ist jetzt in deinem Rucksack.', 2500);
+      renderPhone();
+    } });
+  return el('div', { className: 'row-btn' }, el('span', { textContent: label }), btn);
+}
+function renderBag(body) {
+  body.append(el('h3', { textContent: `⭐ ${profile.stars} Sterne` }));
+  body.append(el('h3', { textContent: '🚗 Fahrzeuge' }));
+  const colors = el('div', { className: 'color-dots' });
+  VEH_COLORS.forEach((c, i) => colors.append(el('button', { className: i === profile.vehColor ? 'on' : '', style: `background:${c}`, ariaLabel: `Farbe ${i + 1}`, onclick: () => { saveVehColor(i); renderPhone(); } })));
+  body.append(colors);
+  for (const { type, price } of SHOP.veh) {
+    const V = VEHICLES[type], id = 'veh:' + type;
+    body.append(shopRow(`${V.emoji} ${V.name}`, ownsShop(id), price, 'Fahren', () => { closePhone(); game.ownVehicle(type, profile.vehColor); }, () => buyShop(id, price)));
+  }
+  body.append(el('h3', { textContent: '🎁 Deko' }));
+  for (const { key, price } of SHOP.deco) {
+    const t = ITEM_TYPES[ITEM_INDEX[key]], id = 'deco:' + key;
+    body.append(shopRow(`${t.emoji} ${t.name}`, ownsShop(id), price, 'Hinstellen', () => { closePhone(); game.placeDeco(key); }, () => buyShop(id, price)));
+  }
+  body.append(el('h3', { textContent: '🐾 Tiere' }));
+  AVATAR_OPTIONS.pet.forEach((name, i) => {
+    if (!i) return;
+    const mine = profile.avatar.pet === i;
+    const setPet = pet => { const a = { ...profile.avatar, pet }; saveAvatar(a); game.setMyAvatar(a); renderPhone(); };
+    body.append(shopRow(name, owns('pet', i), PRICES.pet[i] || 0, mine ? 'Nach Hause' : 'Mitnehmen', () => setPet(mine ? 0 : i), () => buy('pet', i)));
+  });
+}
+
 $('btnPhone').onclick = openPhone;
 $('phoneClose').onclick = closePhone;
 

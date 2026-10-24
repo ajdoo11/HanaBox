@@ -1473,6 +1473,26 @@ export class Game {
     else this.notice(`${V.emoji} Los geht's! Joystick hoch = fahren, links/rechts = lenken`, 3000);
   }
 
+  // Rucksack: eigenes Fahrzeug hervorholen bzw. Deko hinstellen (nur draussen in der Stadt)
+  outdoors() {
+    if (this.gameKey === 'town' && !this.adv) return true;
+    this.notice('🎒 Das geht nur draussen in der Stadt.', 2500);
+    return false;
+  }
+  ownVehicle(type, color) {
+    if (!this.outdoors()) return;
+    if (this.driving || this.riding != null || this.onBus || this.carriedBy != null) return this.notice('🚗 Steig zuerst aus.', 2500);
+    if (this.swimming) return this.notice('🌊 Schwimm zuerst ans Ufer.', 2500);
+    if (this.pose) this.standUp();
+    this.enterVehicle(type, color);
+  }
+  placeDeco(key) {
+    if (!this.outdoors()) return;
+    if (this.driving) return this.notice('🚗 Steig zuerst aus.', 2500);
+    this.spawnItem(key);
+    this.notice('🎁 Tippe auf «🤲 Hinlegen», wo es stehen soll.', 3500);
+  }
+
   exitVehicle() {
     if (!this.driving) return;
     const d = this.driving;

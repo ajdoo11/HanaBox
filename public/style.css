@@ -351,3 +351,13 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
   font-size: 16px; outline: none; background: #fff;
 }
 .add-child-row input:focus { border-color: var(--purple); }
+/* Rucksack im Handy */
+.phone-tabs { flex-wrap: wrap; }
+.phone-body .row-btn .btn.small { margin: 0; padding: 8px 14px; border-radius: 12px; font-size: 15px; font-weight: 900; white-space: nowrap; }
+.phone-body .btn.buy { background: #ffca28; color: #4e342e; }
+.phone-body .btn.buy.poor { background: #e0dbe9; color: #8a7fa0; }
+.phone-body .btn.use { background: #7c4dff; color: #fff; }
+.color-dots { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 4px 8px; }
+.color-dots button { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #cfc6e6; }
+.color-dots button.on { box-shadow: 0 0 0 3px #7c4dff; }
+.phone-top .btn.small { color: #2b2140; }
