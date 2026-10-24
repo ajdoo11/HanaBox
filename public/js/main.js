@@ -5,7 +5,7 @@ import { Character } from './avatar.js';
 import { Input } from './input.js';
 import { Game } from './game.js';
 import { unlockAudio, sfx, setMuted } from './sfx.js';
-import { profile, saveName, saveAvatar, saveMuted, saveGrab, addRecent, removeRecent } from './profile.js';
+import { profile, saveName, saveAvatar, saveMuted, saveGrab, addRecent, removeRecent, workLeft, WORK_DAILY } from './profile.js';
 import { avatarEditor, ALL_TABS } from './editor.js';
 import * as Account from './account.js';
 import { SERVER_URL } from './config.js';
@@ -366,6 +366,41 @@ $('questClose').onclick = () => { $('questPanel').hidden = true; };
 $('gmBots').onclick = () => { botsOn = !botsOn; net?.send({ t: 'bots', on: botsOn, count: Number($('gmBotCount').value) }); updateSoundBtn(); };
 $('gmBotCount').oninput = () => { $('gmBotCountLabel').textContent = $('gmBotCount').value; };
 $('gmBotCount').onchange = () => { const c = Number($('gmBotCount').value); localStorage.setItem('hana_botCount', c); net?.send({ t: 'bots', on: botsOn, count: c }); };
+// Handy: Karte, Selfie, Freunde und Sterne – öffnet sich über das ☰-Menü
+const PHONE_TABS = [['map', '🗺️ Karte'], ['selfie', '📸 Selfie'], ['friends', '⭐ Freunde'], ['stars', '⭐ Sterne']];
+let phoneTab = 'map';
+function openPhone() { $('gameMenu').hidden = true; $('phone').hidden = false; renderPhone(); }
+function closePhone() { $('phone').hidden = true; }
+function renderPhone() {
+  const tabs = $('phoneTabs');
+  tabs.replaceChildren();
+  for (const [k, label] of PHONE_TABS) tabs.append(el('button', { className: k === phoneTab ? 'on' : '', textContent: label, onclick: () => { phoneTab = k; renderPhone(); } }));
+  const body = $('phoneBody');
+  body.replaceChildren();
+  if (!game) return;
+  if (phoneTab === 'map') {
+    const land = game.land || game.def.lands[0];
+    body.append(el('h3', { textContent: `${land.emoji} ${land.name}` }));
+    for (const [name, x, z] of game.def.destinations?.[land.key] || []) body.append(el('button', { className: 'row-btn', textContent: name, onclick: () => { closePhone(); game.goTo(name, x, z); } }));
+    body.append(el('h3', { textContent: '✈️ Reisen' }));
+    for (const l of game.def.lands || []) body.append(el('button', { className: 'row-btn', textContent: `${l.emoji} ${l.name}`, onclick: () => { closePhone(); game.travel(l); } }));
+  } else if (phoneTab === 'selfie') {
+    body.append(el('p', { textContent: 'Mach ein Foto von dir mit allen, die gerade in der Nähe sind. Danach kannst du es speichern.' }));
+    body.append(el('button', { className: 'row-btn', textContent: '📸 Selfie machen', onclick: () => { closePhone(); game.takePhoto(); } }));
+  } else if (phoneTab === 'friends') {
+    const online = new Set([...game.remotes.values()].map(r => r.name));
+    if (!game.friends.size) body.append(el('p', { textContent: 'Noch keine Freunde. Tippe in der Spielerliste oben rechts auf einen Namen, dann wird er dein Freund ⭐.' }));
+    for (const n of game.friends) {
+      body.append(el('div', { className: 'row-btn' }, el('span', { textContent: `${online.has(n) ? '🟢' : '⚪'} ${n}` }),
+        el('button', { className: 'btn small', textContent: 'Entfernen', onclick: () => { game.toggleFriend(n); renderPhone(); } })));
+    }
+  } else {
+    body.append(el('h3', { textContent: `⭐ ${profile.stars} Sterne` }), el('p', { textContent: `Arbeits-Sterne heute: noch ${workLeft()} von ${WORK_DAILY}.` }));
+  }
+}
+$('gmPhone').onclick = openPhone;
+$('phoneClose').onclick = closePhone;
+
 $('gmGrab').onclick = () => { saveGrab(profile.grab === false); net?.send({ t: 'pref', grab: profile.grab !== false }); updateSoundBtn(); };
 // Selfie: Vorschau mit Speichern (iPad/iPhone: «Bild sichern» landet in den Fotos)
 $('btnPhoto').onclick = () => game?.takePhoto();

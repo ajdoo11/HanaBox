@@ -260,6 +260,14 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .teeth-card p { margin: 0 0 8px; font-weight: 700; }
 .teeth-card canvas { width: 100%; height: auto; border-radius: 18px; background: #fce4ec; touch-action: none; }
 .teeth-tools { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+.phone-card { width: min(420px, 94vw); max-height: 88vh; background: #1f2a44; border-radius: 34px; padding: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.4); color: #fff; display: flex; flex-direction: column; gap: 10px; }
+.phone-top { display: flex; justify-content: space-between; align-items: center; font-size: 20px; }
+.phone-tabs { display: flex; gap: 6px; }
+.phone-tabs button { flex: 1; border-radius: 14px; padding: 8px 4px; background: #2f3d61; color: #fff; font-weight: 800; font-size: 15px; }
+.phone-tabs button.on { background: #7c4dff; }
+.phone-body { background: #f4f1ff; color: #2b2140; border-radius: 22px; padding: 12px; overflow-y: auto; min-height: 260px; max-height: 58vh; }
+.phone-body h3 { margin: 6px 4px; font-size: 18px; }
+.phone-body .row-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 6px 0; padding: 12px 14px; border-radius: 14px; background: #fff; font-weight: 800; font-size: 16px; color: #2b2140; box-shadow: 0 2px 0 rgba(0,0,0,.08); text-align: left; }
 .fade { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 40; }
 .fade.on { opacity: 1; }
 
