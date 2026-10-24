@@ -284,7 +284,11 @@ async function connect(opts) {
       return;
     }
     if (game) {
+      // Verbindung weg (z. B. Tablet kurz gesperrt): automatisch wieder in die Welt
+      loading('Verbindung weg – ich verbinde dich neu …');
       endGame();
+      setTimeout(() => connect({}), 1500);
+      return;
       dialog((card, close) => {
         card.append(el('div', { className: 'big-emoji', textContent: '📡' }), el('h2', { textContent: 'Verbindung unterbrochen' }),
           el('p', { textContent: 'Prüfe das WLAN und versuche es nochmal.' }),
@@ -398,7 +402,7 @@ function renderPhone() {
     body.append(el('h3', { textContent: `⭐ ${profile.stars} Sterne` }), el('p', { textContent: `Arbeits-Sterne heute: noch ${workLeft()} von ${WORK_DAILY}.` }));
   }
 }
-$('gmPhone').onclick = openPhone;
+$('btnPhone').onclick = openPhone;
 $('phoneClose').onclick = closePhone;
 
 $('gmGrab').onclick = () => { saveGrab(profile.grab === false); net?.send({ t: 'pref', grab: profile.grab !== false }); updateSoundBtn(); };

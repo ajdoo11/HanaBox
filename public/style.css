@@ -119,10 +119,12 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 }
 #hud > * { pointer-events: auto; }
 #hud .chatlog, #hud .notice, #hud .hud-status, #hud .joy { pointer-events: none; }
+/* Cartoon-Look: dicker Rand, kräftiger Schatten, runde Form */
 .hbtn {
-  background: rgba(255,255,255,0.9); border-radius: calc(var(--u) * 1.6); height: calc(var(--u) * 5.4); min-width: calc(var(--u) * 5.4);
-  font-size: calc(var(--u) * 2.5); padding: 0 var(--u); box-shadow: 0 3px 0 rgba(0,0,0,0.18);
+  background: #fffdf5; border: 3px solid #2b2140; border-radius: calc(var(--u) * 1.6); height: calc(var(--u) * 5.4); min-width: calc(var(--u) * 5.4);
+  font-size: calc(var(--u) * 2.5); padding: 0 var(--u); box-shadow: 0 4px 0 #2b2140;
 }
+.hbtn.phone-btn { background: #7c4dff; color: #fff; }
 .hbtn.wide { font-size: calc(var(--u) * 1.8); font-weight: 800; padding: 0 calc(var(--u) * 1.4); white-space: nowrap; }
 .hbtn.round { border-radius: 50%; width: var(--round); height: var(--round); font-size: calc(var(--u) * 2.9); }
 .voice-btn.mic { background: #43a047; color: #fff; }

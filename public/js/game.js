@@ -2358,9 +2358,9 @@ export class Game {
       if (!isFriend) { if (r.tag) r.tag.visible = false; continue; }
       if (!r.tag) r.tag = this.nameTag(r.name);
       const d = r.pos.distanceTo(this.body.p);
-      r.tag.visible = d > 9 && d < 160;
+      r.tag.visible = d < 200;
       r.tag.position.set(r.pos.x, r.pos.y + 4.6, r.pos.z);
-      r.tag.material.opacity = Math.min(1, Math.max(0, (d - 9) / 12));
+      r.tag.material.opacity = Math.min(1, Math.max(0.25, (d - 3) / 8));
     }
   }
 
