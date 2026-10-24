@@ -44,6 +44,17 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     entity(id) { return this.players.get(id) || this.bots.get(id); }
     participants() { return [...this.players.values(), ...[...this.bots.values()].filter(b => !b.staticBot)]; }
 
+    // Bots in Sichtweite eines Spielers (mit etwas Spielraum, damit sie am Rand nicht flackern)
+    botNear(pl, b) {
+      const R = pl.near?.has(b.id) ? BOT_VIEW + 40 : BOT_VIEW;
+      return Math.abs(b.state[0] - pl.state[0]) < R && Math.abs(b.state[2] - pl.state[2]) < R;
+    }
+    // Nachricht eines Bots (Chat, Sprechblase) nur an Spieler, die ihn sehen
+    toNear(botId, msg) {
+      const s = JSON.stringify(msg);
+      for (const p of this.players.values()) if (p.near?.has(botId) && p.ws.readyState === 1) p.ws.send(s);
+    }
+
     broadcast(msg, except) {
       const s = JSON.stringify(msg);
       for (const p of this.players.values()) if (p !== except && p.ws.readyState === 1) p.ws.send(s);
@@ -85,7 +96,6 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
           const b = new Bot(this, nextBotId++, area ? { pos: this.landSpawn(area), land: area } : this.game === 'town' ? { pos: this.townSpawn() } : {});
           this.bots.set(b.id, b);
           if (this.game === 'tag') this.itMs.set(b.id, 0);
-          this.broadcast({ t: 'join', player: b.pub() });
         }
         for (let n = dyn.length; n > want; n--) this.removeBot(dyn[n - 1]);
       }
@@ -94,6 +104,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
       this.releaseLinks(b);
       this.bots.delete(b.id);
       this.broadcast({ t: 'leave', id: b.id });
+      for (const p of this.players.values()) p.near?.delete(b.id);
       if (this.game === 'tag' && this.it === b.id) this.it = null;
     }
     onHumanChat(p, i) {
@@ -325,19 +336,21 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     flushStates() {
       const l = [];
       for (const p of this.allEntities()) if (p.dirty) { p.dirty = false; l.push([p.id, ...p.state]); }
+      // Jedes Gerät kennt nur die Bots in seiner Nähe (sonst wird es auf dem iPad zu viel und die App stürzt ab)
       for (const pl of this.players.values()) {
-        const [px, , pz] = pl.state;
-        const inView = s => Math.abs(s[0] - px) < BOT_VIEW && Math.abs(s[2] - pz) < BOT_VIEW;
-        const out = l.filter(row => !this.bots.has(row[0]) || inView([row[1], row[2], row[3]]));
-        const sent = new Set(out.map(row => row[0]));
+        const old = pl.near || new Set();
         const near = new Set();
+        const joins = [];
         for (const b of this.bots.values()) {
-          if (!inView(b.state)) continue;
+          if (!this.botNear(pl, b)) continue;
           near.add(b.id);
-          // neu in Sichtweite: aktuelle Position schicken, auch wenn der Bot gerade still steht
-          if (!pl.near?.has(b.id) && !sent.has(b.id)) out.push([b.id, ...b.state]);
+          if (!old.has(b.id)) joins.push(b.pub());
         }
+        const leaves = [...old].filter(id => !near.has(id));
         pl.near = near;
+        const out = l.filter(row => !this.bots.has(row[0]) || (near.has(row[0]) && old.has(row[0])));
+        if (leaves.length) send(pl.ws, { t: 'leaves', ids: leaves });
+        if (joins.length) send(pl.ws, { t: 'joins', players: joins });
         if (out.length) send(pl.ws, { t: 'st', l: out });
       }
     }
@@ -358,9 +371,10 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
     if (room.game === 'tag') room.itMs.set(p.id, 0);
     room.players.set(p.id, p);
     room.syncBots();
+    p.near = new Set([...room.bots.values()].filter(b => room.botNear(p, b)).map(b => b.id));
     send(client.ws, {
       t: 'welcome', id: p.id, name: p.name, code: room.code, game: room.game, now: Date.now(),
-      players: [...room.allEntities()].filter(e => e !== p).map(x => room.pub(x)), extra: room.extra(), bots: room.botsEnabled,
+      players: [...room.players.values(), ...[...room.bots.values()].filter(b => p.near.has(b.id))].filter(e => e !== p).map(x => room.pub(x)), extra: room.extra(), bots: room.botsEnabled,
     });
     room.broadcast({ t: 'join', player: room.pub(p) }, p);
     client.room = room;
@@ -606,8 +620,7 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
             setTimeout(() => {
               if (!rooms.has(room.code)) return;
               const sb = WORLDS.town.staticBots.find(s => s.role === 'patient' && s.chair === t.chair);
-              const nb = room.addStaticBot({ ...sb, avatar: randomAvatar() });
-              room.broadcast({ t: 'join', player: nb.pub() });
+              room.addStaticBot({ ...sb, avatar: randomAvatar() });
             }, 12000);
           }, 3500);
         }

@@ -5,7 +5,7 @@ import { ITEM_TYPES } from './shared.js';
 import { mergeChildren } from './merge.js';
 
 const G = {
-  sphere: new THREE.SphereGeometry(1, 16, 12),
+  sphere: new THREE.SphereGeometry(1, 12, 9),
   box: new THREE.BoxGeometry(1, 1, 1),
   cyl: new THREE.CylinderGeometry(1, 1, 1, 20),
   cone: new THREE.ConeGeometry(1, 1, 16),
@@ -337,14 +337,20 @@ Object.assign(BUILDERS, {
   },
 });
 
+const templates = new Map();
 export function makeItemMesh(type) {
-  const g = new THREE.Group();
-  const t = ITEM_TYPES[type];
-  const inner = new THREE.Group();
-  g.add(inner);
-  BUILDERS[t?.key]?.(inner);
-  mergeChildren(inner);
-  g.userData.inner = inner;
+  let tpl = templates.get(type);
+  if (!tpl) {
+    tpl = new THREE.Group();
+    const inner = new THREE.Group();
+    tpl.add(inner);
+    BUILDERS[ITEM_TYPES[type]?.key]?.(inner);
+    mergeChildren(inner);
+    templates.set(type, tpl);
+  }
+  // Kopie teilt Form und Material mit der Vorlage (spart viel Speicher, wichtig für iPads)
+  const g = tpl.clone();
+  g.userData.inner = g.children[0];
   return g;
 }
 

@@ -40,6 +40,7 @@ function wheel(g, x, y, z, r, w) {
   add(wg, WHEEL, M('#212121'), 0, 0, 0, w, r, r);
   add(wg, WHEEL, M('#cfd8dc'), 0, 0, 0, w + 0.02, r * 0.5, r * 0.5);
   add(wg, RB(w + 0.04, r * 0.3, r * 1.2, 0.02), M('#9e9e9e'), 0, 0, 0);
+  wg.userData.wheel = true;
   g.add(wg);
   g.userData.wheels.push(wg);
 }
@@ -57,7 +58,21 @@ export const SEATS = {
   speedboat: { pos: [0, 0.7, -0.2], anim: 'drive' },
 };
 
+const templates = new Map();
 export function makeVehicle(type, colorIdx) {
+  const k = type + ':' + colorIdx;
+  if (!templates.has(k)) {
+    const tpl = buildVehicle(type, colorIdx);
+    delete tpl.userData.wheels;
+    templates.set(k, tpl);
+  }
+  // Kopie teilt Formen und Materialien; die Räder drehen sich trotzdem einzeln
+  const v = templates.get(k).clone();
+  v.userData.wheels = v.children.filter(c => c.userData.wheel);
+  return v;
+}
+
+function buildVehicle(type, colorIdx) {
   const key = VEHICLES[type]?.key || 'car';
   const c = VEH_COLORS[colorIdx] || VEH_COLORS[0];
   const g = new THREE.Group();
@@ -110,6 +125,7 @@ export function makeVehicle(type, colorIdx) {
         add(wg, TOR, M('#212121'), 0, 0, 0, 0.42, 0.42, 0.42);
         add(wg, RB(0.04, 0.8, 0.04, 0.01), M('#bdbdbd'), 0, 0, 0);
         add(wg, RB(0.04, 0.04, 0.8, 0.01), M('#bdbdbd'), 0, 0, 0);
+        wg.userData.wheel = true;
         g.add(wg); g.userData.wheels.push(wg);
       }
       break;

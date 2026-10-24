@@ -77,8 +77,8 @@ export class Bot {
     return { id: this.id, name: this.name, avatar: this.avatar, score: this.score, state: this.state, bot: true, staticBot: this.staticBot, role: this.role, chair: this.chair };
   }
 
-  chat(i) { this.room.broadcast({ t: 'chat', id: this.id, i }); }
-  say(text) { this.room.broadcast({ t: 'say', id: this.id, text }); }
+  chat(i) { this.room.toNear(this.id, { t: 'chat', id: this.id, i }); }
+  say(text) { this.room.toNear(this.id, { t: 'say', id: this.id, text }); }
 
   setState(anim) {
     const p = this.body.p;

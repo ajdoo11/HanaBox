@@ -17,15 +17,18 @@ export function mergeChildren(group, castShadow = true) {
   const list = group.children.filter(mergeable);
   if (list.length < 2) return null;
   const geos = [];
+  // Haben alle Teile einen Index, bleibt er erhalten (eine Kugel ohne Index hätte 5x so viele Ecken)
+  const indexed = list.every(m => m.geometry.index);
   for (const mesh of list) {
     mesh.updateMatrix();
-    let g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+    let g = mesh.geometry.index && !indexed ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
     g.applyMatrix4(mesh.matrix);
     tmpColor.copy(mesh.material.color);
     const n = g.attributes.position.count;
-    const col = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) { col[i * 3] = tmpColor.r; col[i * 3 + 1] = tmpColor.g; col[i * 3 + 2] = tmpColor.b; }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const col = new Uint8Array(n * 3);
+    const cr = Math.round(tmpColor.r * 255), cg = Math.round(tmpColor.g * 255), cb = Math.round(tmpColor.b * 255);
+    for (let i = 0; i < n; i++) { col[i * 3] = cr; col[i * 3 + 1] = cg; col[i * 3 + 2] = cb; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3, true));
     for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k);
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(n * 2), 2));
     g.clearGroups();

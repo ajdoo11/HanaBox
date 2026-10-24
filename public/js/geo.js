@@ -185,13 +185,16 @@ export function buildStatic(parts, scene, disposables) {
     if (needsOwnMesh(p)) { own.push(p); continue; }
     const big = p.w > 70 || p.d > 70;
     const chunk = big ? 'all' : `${Math.floor(p.x / 64)},${Math.floor(p.z / 64)}`;
-    const key = materialKey(p) + '#' + chunk;
-    if (!groups.has(key)) groups.set(key, { p, geos: [] });
     const geo = partGeometry(p);
+    // Teile mit und ohne Index getrennt halten: sonst müssten alle ohne Index (Kugeln hätten 5x so viele Ecken)
+    const key = materialKey(p) + '#' + chunk + (geo.index ? '#i' : '#n');
+    if (!groups.has(key)) groups.set(key, { p, geos: [] });
     if (vertexColored(p)) {
-      const c = tmpColor.set(p.c), n = geo.attributes.position.count, col = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
-      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      // Farbe pro Ecke als 1 Byte je Kanal (spart viel Speicher, wichtig für iPads)
+      const c = tmpColor.set(p.c), n = geo.attributes.position.count, col = new Uint8Array(n * 3);
+      const cr = Math.round(c.r * 255), cg = Math.round(c.g * 255), cb = Math.round(c.b * 255);
+      for (let i = 0; i < n; i++) { col[i * 3] = cr; col[i * 3 + 1] = cg; col[i * 3 + 2] = cb; }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3, true));
     }
     groups.get(key).geos.push(geo);
   }

@@ -806,6 +806,9 @@ export class Game {
   onMessage(m) {
     switch (m.t) {
       case 'join': this.addRemote(m.player); break;
+      // Bots in der Nähe kommen dazu bzw. gehen wieder (der Server schickt nur nahe Bots)
+      case 'joins': for (const pl of m.players) this.addRemote(pl, true); break;
+      case 'leaves': for (const id of m.ids) if (this.carrying !== id) this.removeRemote(id); break;
       case 'ride': this.onRide(m); break;
       case 'leave': this.removeRemote(m.id); break;
       case 'st':
