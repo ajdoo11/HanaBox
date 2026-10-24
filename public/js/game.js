@@ -876,8 +876,9 @@ export class Game {
       }
       case 'it': this.setIt(m.id, false, m.by); break;
       case 'item': this.addItem(m.it); break;
-      case 'gift': { // Sterne geschenkt bekommen
+      case 'gift': { // Sterne geschenkt bekommen (Empfang bestätigen, sonst kommen sie beim nächsten Start nochmal)
         addStars(m.n);
+        this.net.send({ t: 'giftAck', n: m.n });
         sfx('goal');
         this.burst(new THREE.Vector3(this.body.p.x, this.body.p.y + 2, this.body.p.z), ['#ffd54f', '#fff59d', '#ff80ab'], 40, 8);
         this.showBig(`🎁 ${m.from ? m.from + ' hat dir' : 'Du hast'} ${m.n} ⭐ geschenkt${m.from ? '!' : ' bekommen!'}`, ['Viel Spass damit! 😊'], [], 3500);

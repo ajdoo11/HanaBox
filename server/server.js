@@ -122,9 +122,9 @@ const server = http.createServer(async (req, res) => {
     const b = await readBody(req);
     const n = Number(b?.n);
     if (!Number.isInteger(n) || n < 1 || n > 500 || !accounts.has(b?.name)) return jsonRes(res, 400, { error: 'Ungültig' });
-    // Spielt das Kind gerade, kommen die Sterne sofort an, sonst beim nächsten Spielstart
-    const live = core.giftTo(b.name, n, admin.name);
-    if (!live) accounts.addGift(b.name, n);
+    // Erst gutschreiben (bleibt bis zur Bestätigung gespeichert), dann ans laufende Spiel schicken
+    accounts.addGift(b.name, n);
+    const live = core.giftTo(b.name, admin.name);
     log(`${admin.name} schenkt ${b.name} ${n} Sterne${live ? '' : ' (beim nächsten Spielstart)'}`);
     return jsonRes(res, 200, { ok: true, live });
   }
@@ -143,7 +143,8 @@ const server = http.createServer(async (req, res) => {
 const core = createGameCore({
   log,
   authenticate: token => accounts.byToken(token),
-  takeGift: account => accounts.takeGift(account),
+  pendingGift: account => accounts.pendingGift(account),
+  ackGift: (account, n) => accounts.ackGift(account, n),
   storage: {
     read: (kind, code) => worlds.get(worldId(kind, code)) ?? null,
     write(kind, code, data) { worlds.set(worldId(kind, code), data); store.set('worlds', worldId(kind, code), data); },

@@ -84,10 +84,12 @@ export async function createAccounts(store) {
       return true;
     },
     has: name => byId.has(String(name ?? '').toLowerCase()),
-    takeGift(a) {
-      const n = a?.pendingStars || 0;
-      if (n) { a.pendingStars = 0; save(a.name.toLowerCase()); }
-      return n;
+    // Geschenk bleibt gespeichert, bis das Spiel des Kindes den Empfang bestätigt
+    pendingGift: a => a?.pendingStars || 0,
+    ackGift(a, n) {
+      if (!a?.pendingStars || !Number.isInteger(n) || n < 1) return;
+      a.pendingStars = Math.max(0, a.pendingStars - n);
+      save(a.name.toLowerCase());
     },
     setProfile(token, profile) {
       const a = this.byToken(token);

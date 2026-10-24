@@ -6,7 +6,7 @@ import { Bot, randomAvatar, worldPhysics } from './bots.js';
 
 // storage: { read(kind, code), write(kind, code, data), exists(kind, code) } mit kind = 'build' | 'town'
 // authenticate(token): liefert das Konto ({ name }) – ohne diese Funktion (im Browser) wählt man den Namen selbst
-export function createGameCore({ storage, log = () => {}, authenticate = null, takeGift = null }) {
+export function createGameCore({ storage, log = () => {}, authenticate = null, pendingGift = null, ackGift = null }) {
   // ---------- Räume ----------
   const rooms = new Map();
   // Alle spielen zusammen in derselben Welt
@@ -379,8 +379,10 @@ export function createGameCore({ storage, log = () => {}, authenticate = null, t
     room.broadcast({ t: 'join', player: room.pub(p) }, p);
     client.room = room;
     client.player = p;
-    // Sterne, die jemand verschenkt hat, während das Kind nicht gespielt hat
-    const gift = account && takeGift ? takeGift(account) : 0;
+    // Sterne, die jemand verschenkt hat und die noch nicht angekommen sind
+    p.account = account;
+    p.joinedAt = Date.now();
+    const gift = account && pendingGift ? pendingGift(account) : 0;
     if (gift) send(client.ws, { t: 'gift', n: gift });
     log(`${name} → Raum ${room.code} (${GAMES[room.game].name}), ${room.players.size} Spieler`);
   }
@@ -581,6 +583,9 @@ export function createGameCore({ storage, log = () => {}, authenticate = null, t
         room.saveSoon();
         break;
       }
+      case 'giftAck': // das Spiel hat die geschenkten Sterne gutgeschrieben
+        if (p.account && ackGift) ackGift(p.account, m.n);
+        break;
       case 'grab': {
         const t = room.entity(m.id);
         if (!t || t === p || t.staticBot) return;
@@ -730,12 +735,17 @@ export function createGameCore({ storage, log = () => {}, authenticate = null, t
 
   // Für das Eltern-Konto: wer spielt gerade, und Sterne direkt ins laufende Spiel schicken
   function onlineNames() { return [...rooms.values()].flatMap(r => [...r.players.values()].map(p => p.name)); }
-  function giftTo(name, n, from) {
+  // Schickt alle noch offenen Sterne an die neuste Verbindung dieses Kindes
+  function giftTo(name, from) {
     const low = String(name).toLowerCase();
+    let best = null;
     for (const r of rooms.values()) for (const p of r.players.values()) {
-      if (p.name.toLowerCase() === low && p.ws.readyState === 1) { send(p.ws, { t: 'gift', n, from }); return true; }
+      if (p.name.toLowerCase() === low && p.ws.readyState === 1 && (!best || p.joinedAt > best.joinedAt)) best = p;
     }
-    return false;
+    const n = best?.account && pendingGift ? pendingGift(best.account) : 0;
+    if (!best || !n) return false;
+    send(best.ws, { t: 'gift', n, from });
+    return true;
   }
 
   return { connect, message, disconnect, rooms, saveAll, onlineNames, giftTo };
