@@ -20,3 +20,10 @@ Stand: 2026-10-24. Diese Datei ist der Fahrplan. Wenn die Sitzung ein Limit erre
 ## Regeln
 - Jeder Schritt wird einzeln committet und getestet, bevor der nächste beginnt.
 - Keine echten Fotos von Kindern im Spiel.
+
+## Vorgaben vom 24.10. (verbindlich)
+- Kein echtes Geld. Häuser, Autos, Deko und Tiere werden nur mit Sternen aus dem Spiel bezahlt.
+- Preise moderat: Häuser etwa 40–150 Sterne, Autos 10–60, Deko 2–20. Alles muss mit den Tages-Arbeitssternen (Deckel 90) erreichbar sein.
+- Stil: warmer Trickfilm-Look, dicke weiche Konturen, runde Formen, kräftige Farben, schöne Lichter. Eigenständig gestaltet.
+- Nicht erlaubt: Figuren, Logos oder der Stil einer bestehenden Serie oder eines Spiels (z. B. Simpsons, kommerzielle Spiele). Eigener Stil ist Pflicht.
+- Grafik-Schritt (eigener Abschnitt): Cel-Shading mit Umrisslinien für Figuren, Autos, Häuser. Vorher Leistungstest auf dem iPad und Handy.
