@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { toonMat, Outline } from './toon.js';
 import { WORLDS } from './worlds.js';
-import { GAMES, BLOCK_TYPES, ANIMS, ITEM_TYPES, ITEM_INDEX, VEHICLES, PETS, chatText, vehCode, vehDecode, HOUSE_LOTS } from './shared.js';
+import { GAMES, BLOCK_TYPES, ANIMS, ITEM_TYPES, ITEM_INDEX, VEHICLES, PETS, chatText, vehCode, vehDecode, HOUSE_LOTS, HOUSE_WALLS, HOUSE_FLOORS, FURNITURE, MAX_FURN } from './shared.js';
 import { Physics, Body, makeBox, makeRamp, PLAYER, SEA } from './physics.js';
 import { Character } from './avatar.js';
 import { BuildWorld, blockIcon } from './build.js';
@@ -14,12 +14,14 @@ import { getTexture } from './textures.js';
 import { addStars, saveAvatar, earnWork, jobWait, markJob, workLeft, WORK_DAILY } from './profile.js';
 import { avatarEditor, SALON_TABS, CLOTHES_TABS, PET_TABS } from './editor.js';
 import { openTeethGame } from './dentist.js';
+import { openPizzaGame } from './pizza.js';
 import { landAt, LAND_DEFS, townCellAllowed } from './lands.js';
 import { VoiceChat } from './voice.js';
 import { makeAdventure, hourIndex, minutesLeft } from './adventure.js';
 import { track } from './quests.js';
 import { sfx } from './sfx.js';
-import { lotParts, lotInterior, lotFront } from './houses.js';
+import { lotParts, lotInterior, lotFront, lotInside, defaultFurn } from './houses.js';
+import { makeTrafficLights, makeBoats } from './traffic.js';
 
 const SHADOW_R = 85;
 const MAX_BOTS_SHOWN = 30;
@@ -28,9 +30,9 @@ const ACT_LABELS = {
   sit: '🪑 Hinsetzen', sleep: '😴 Schlafen', bath: '🛁 Baden', shower: '🚿 Duschen', salon: '💇 Frisur machen',
   wardrobe: '👗 Umziehen', swing: '🎠 Schaukeln', treasure: '🎁 Schatz öffnen', brush: '🪥 Zähne putzen',
   dchair: '🦷 Auf den Zahnarztstuhl', dentist: '🦷 Zähne behandeln', register: '🛒 Bezahlen (Piep!)',
-  job: '💼 Arbeiten',
+  job: '💼 Arbeiten', pizza: '🍕 Pizza backen',
 };
-const RING_ACTS = new Set(['fireworks', 'menu', 'wardrobe', 'salon', 'dentist', 'dchair', 'treasure', 'vehicle', 'brush', 'register', 'swing', 'shower', 'travel', 'button', 'adopt', 'job']);
+const RING_ACTS = new Set(['fireworks', 'menu', 'wardrobe', 'salon', 'dentist', 'dchair', 'treasure', 'vehicle', 'brush', 'register', 'swing', 'shower', 'travel', 'button', 'adopt', 'job', 'pizza']);
 
 const JOB_TASKS = [
   { name: 'Bäckerei', emoji: '🥐', msg: 'Du backst Brötchen!', stars: 5, time: 4 },
@@ -317,6 +319,8 @@ export class Game {
       this.scene.add(plane);
       this.groundPick = plane;
       this.disposables.push(plane.geometry, plane.material);
+      this.traffic = makeTrafficLights(this.scene);
+      this.boats = makeBoats(this.scene, LAND_DEFS);
       // Grundstücke für eigene Häuser (zuerst alle frei, der Server schickt danach die gebauten Häuser)
       this.lots = HOUSE_LOTS.map((_, i) => ({ h: null, rec: this.addChunk(lotParts(i, null).parts) }));
     }
@@ -1345,6 +1349,18 @@ export class Game {
         openTeethGame({ title: '🪥 Zähne putzen', onDone: ok => { if (ok) { earnWork(3); this.notice('✨ Strahlende Zähne! +3 ⭐'); this.char.say('😁✨'); } } });
         break;
       case 'dentist': this.treatPatient(a.part.chair); break;
+      case 'pizza':
+        this.char.say('👩‍🍳 Pizza kommt!');
+        openPizzaGame({
+          onServe: () => { sfx('coin'); return earnWork(4); },
+          onDone: ({ served, earned }) => {
+            if (!served) return;
+            this.quest?.('job');
+            this.notice(earned ? `🍕 ${served} Pizza${served > 1 ? 's' : ''} gebacken! ⭐ +${earned}` : `🍕 ${served} Pizza${served > 1 ? 's' : ''} gebacken! (Heute keine Arbeits-Sterne mehr)`, 3500);
+            this.char.say('😋🍕');
+          },
+        });
+        break;
       case 'register': {
         sfx('coin');
         earnWork(2);
@@ -1518,12 +1534,82 @@ export class Game {
     lot.rec = this.addChunk(parts);
     if (interior) this.def.interiors['lot:' + i] = interior;
     else delete this.def.interiors['lot:' + i];
-    if (inside) {
-      const [ex, ey, ez] = interior ? interior.spawn.entry : [];
-      if (interior) this.teleport(ex, ey + 0.05, ez, interior.spawn.face);
-      else { this.place = 'Hana-Stadt'; this.teleport(lotFront(i).x, 0.15, lotFront(i).z, 0); }
-    }
+    if (inside && !interior) { this.place = 'Hana-Stadt'; this.teleport(lotFront(i).x, 0.15, lotFront(i).z, 0); this.closeFurnish(); }
+    else if (inside && h && lot.style !== h.style) { const [ex, ey, ez] = interior.spawn.entry; this.teleport(ex, ey + 0.05, ez, interior.spawn.face); }
+    lot.style = h?.style;
+    if (this.furnishing && this.furnishing.lot === i && h) this.renderFurnish();
   }
+  // ---------- Eigenes Haus einrichten ----------
+  inMyHouse() {
+    const i = this.myLot();
+    if (i < 0) return -1;
+    const c = lotInside(i, this.lots[i].h), p = this.body.p;
+    return Math.abs(p.x - c.x) < c.W / 2 + 0.5 && Math.abs(p.z - c.z) < c.D / 2 + 0.5 ? i : -1;
+  }
+  openFurnish() {
+    const i = this.inMyHouse();
+    if (i < 0) return;
+    this.furnishing = { lot: i };
+    this.renderFurnish();
+  }
+  closeFurnish() {
+    this.furnishing = null;
+    document.getElementById('furnishPanel')?.remove();
+  }
+  furnState() {
+    const h = this.lots[this.furnishing.lot].h;
+    return { h, furn: (h.furn || defaultFurn(h.style)).map(f => [...f]), inWall: h.inWall ?? h.wall, floor: h.floor ?? (lotInside(this.furnishing.lot, h).style === 'castle' ? 4 : 0) };
+  }
+  sendFurnish(st) { this.net.send({ t: 'furnish', furn: st.furn, inWall: st.inWall, floor: st.floor }); }
+  // Das Möbelstück, vor dem man steht (oder auf dem man steht)
+  nearestFurn(furn) {
+    const c = lotInside(this.furnishing.lot, this.lots[this.furnishing.lot].h), p = this.body.p;
+    const fx = p.x - c.x + Math.sin(this.facing) * 1.5, fz = p.z - c.z + Math.cos(this.facing) * 1.5;
+    let best = -1, bd = 3.5;
+    furn.forEach(([, x, z], k) => { const d = Math.hypot(x - fx, z - fz); if (d < bd) { bd = d; best = k; } });
+    return best;
+  }
+  furnishDo(what, arg) {
+    if (!this.furnishing || this.inMyHouse() !== this.furnishing.lot) { this.closeFurnish(); return; }
+    const st = this.furnState();
+    const c = lotInside(this.furnishing.lot, st.h), p = this.body.p;
+    if (what === 'place') {
+      if (st.furn.length >= MAX_FURN) return this.notice(`🛋️ Höchstens ${MAX_FURN} Möbel pro Haus`, 2500);
+      const x = p.x - c.x + Math.sin(this.facing) * 2.6, z = p.z - c.z + Math.cos(this.facing) * 2.6;
+      const r = ((Math.round((this.facing + Math.PI) / (Math.PI / 2)) % 4) + 4) % 4;
+      st.furn.push([arg, Math.round(x * 10) / 10, Math.round(z * 10) / 10, r]);
+      sfx('place');
+    } else if (what === 'turn' || what === 'remove') {
+      const k = this.nearestFurn(st.furn);
+      if (k < 0) return this.notice('Stell dich vor ein Möbelstück 🙂', 2200);
+      if (what === 'turn') st.furn[k][3] = (st.furn[k][3] + 1) % 4;
+      else st.furn.splice(k, 1);
+      sfx(what === 'turn' ? 'click' : 'remove');
+    } else if (what === 'wall') st.inWall = arg;
+    else if (what === 'floor') st.floor = arg;
+    this.sendFurnish(st);
+  }
+  renderFurnish() {
+    if (!this.furnishing) return;
+    let el = document.getElementById('furnishPanel');
+    if (!el) { el = document.createElement('div'); el.id = 'furnishPanel'; el.className = 'furnish-panel'; document.body.append(el); }
+    const st = this.furnState();
+    const mk = (tag, props = {}, ...kids) => { const e = document.createElement(tag); Object.assign(e, props); e.append(...kids); return e; };
+    const top = mk('div', { className: 'fp-top' },
+      mk('b', { textContent: `🛋️ Einrichten · ${st.furn.length}/${MAX_FURN}` }),
+      mk('button', { className: 'btn small', textContent: '🔄 Drehen', onclick: () => this.furnishDo('turn') }),
+      mk('button', { className: 'btn small', textContent: '🧹 Wegräumen', onclick: () => this.furnishDo('remove') }),
+      mk('button', { className: 'btn small primary', textContent: '✅ Fertig', onclick: () => this.closeFurnish() }));
+    const grid = mk('div', { className: 'fp-grid' });
+    FURNITURE.forEach((f, k) => grid.append(mk('button', { className: 'fp-item', title: f.name, onclick: () => this.furnishDo('place', k) }, mk('span', { textContent: f.emoji }), mk('small', { textContent: f.name }))));
+    const walls = mk('div', { className: 'fp-row' }, mk('span', { textContent: '🎨 Wände' }));
+    HOUSE_WALLS.forEach((c, k) => walls.append(mk('button', { className: 'fp-dot' + (k === st.inWall ? ' on' : ''), style: `background:${c}`, ariaLabel: `Wandfarbe ${k + 1}`, onclick: () => this.furnishDo('wall', k) })));
+    const floors = mk('div', { className: 'fp-row' }, mk('span', { textContent: '🟫 Boden' }));
+    HOUSE_FLOORS.forEach((f, k) => floors.append(mk('button', { className: 'fp-floor' + (k === st.floor ? ' on' : ''), style: `background:${f.c}`, textContent: f.name, onclick: () => this.furnishDo('floor', k) })));
+    const hint = mk('p', { className: 'fp-hint', textContent: 'Tippe auf ein Möbel: es erscheint vor dir. Zum Drehen oder Wegräumen stellst du dich davor.' });
+    el.replaceChildren(top, hint, grid, walls, floors);
+  }
+
   myLot() { return this.lots ? this.lots.findIndex(l => l.h?.owner === this.myName) : -1; }
   lotOwner(i) { return this.lots?.[i]?.h?.owner || null; }
   buildHouse(lot, style, wall, roof) {
@@ -1707,6 +1793,7 @@ export class Game {
 
   // ---------- Knöpfe für Aktionen ----------
   updateActions() {
+    if (this.furnishing && this.inMyHouse() !== this.furnishing.lot) this.closeFurnish();
     const el = $('actions');
     const list = [];
     if (this.onBus) {
@@ -1766,6 +1853,7 @@ export class Game {
           if (label) list.push([label, () => this.doAct(a)]);
         }
       }
+      if (!this.furnishing && this.inMyHouse() >= 0) list.push(['🛋️ Einrichten', () => this.openFurnish()]);
       if (list.length < 3 && !this.driving) {
         const pv = this.nearestParked();
         if (pv) {
@@ -2591,6 +2679,8 @@ export class Game {
     this.updateRemotes(dt);
     this.updateFriendTags();
     this.updateBus();
+    this.traffic?.update(t);
+    this.boats?.update(t, dt, this.body.p);
     this.updateGameRules(dt, t);
     this.updateCamera(dt);
     this.handleTaps();
@@ -2657,6 +2747,7 @@ export class Game {
 
   destroy() {
     this.running = false;
+    this.closeFurnish();
     cancelAnimationFrame(this.raf);
     this.voice.stop();
     removeEventListener('pointerdown', this.voice.unlock, true);

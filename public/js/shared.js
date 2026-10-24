@@ -201,6 +201,22 @@ export const HOUSE_STYLES = [
 ];
 export const HOUSE_WALLS = ['#ffd8c2', '#fff3a8', '#c3ecb2', '#b5e3ff', '#e5c8ff', '#ffd59e', '#ffc2dc', '#ffffff'];
 export const HOUSE_ROOFS = ['#e03131', '#9c5b34', '#1c7ed6', '#2f9e44', '#d6336c', '#7048e8'];
+// Einrichten: Möbel für das eigene Haus (gratis, höchstens MAX_FURN Stück) und Bodenbeläge
+export const FURNITURE = [
+  { key: 'sofa', emoji: '🛋️', name: 'Sofa' }, { key: 'armchair', emoji: '💺', name: 'Sessel' }, { key: 'beanbag', emoji: '🫘', name: 'Sitzsack' },
+  { key: 'bed', emoji: '🛏️', name: 'Bett' }, { key: 'table', emoji: '🍽️', name: 'Tisch' }, { key: 'chair', emoji: '🪑', name: 'Stuhl' },
+  { key: 'desk', emoji: '🖥️', name: 'Pult' }, { key: 'tv', emoji: '📺', name: 'Fernseher' }, { key: 'shelf', emoji: '📚', name: 'Bücherregal' },
+  { key: 'lamp', emoji: '💡', name: 'Stehlampe' }, { key: 'plant', emoji: '🪴', name: 'Pflanze' }, { key: 'rug', emoji: '🟣', name: 'Teppich' },
+  { key: 'wardrobe', emoji: '👗', name: 'Kleiderschrank' }, { key: 'bath', emoji: '🛁', name: 'Badewanne' }, { key: 'sink', emoji: '🚰', name: 'Lavabo' },
+  { key: 'fridge', emoji: '🧊', name: 'Kühlschrank' }, { key: 'stove', emoji: '🍳', name: 'Herd' }, { key: 'toybox', emoji: '🧸', name: 'Spielzeugkiste' },
+  { key: 'piano', emoji: '🎹', name: 'Klavier' }, { key: 'aquarium', emoji: '🐠', name: 'Aquarium' }, { key: 'bunk', emoji: '🪜', name: 'Hochbett' },
+];
+export const FURN_INDEX = Object.fromEntries(FURNITURE.map((f, i) => [f.key, i]));
+export const MAX_FURN = 40;
+export const HOUSE_FLOORS = [
+  { name: 'Holz', c: '#d7a86e', tex: 'wood' }, { name: 'Teppich', c: '#f8bbd0', tex: 'carpet' }, { name: 'Fliesen', c: '#e3f2fd', tex: 'tiles' },
+  { name: 'Karo', c: '#fff3e0', tex: 'checker' }, { name: 'Stein', c: '#cfd8dc', tex: 'stone' },
+];
 
 export const ITEM_INDEX = Object.fromEntries(ITEM_TYPES.map((t, i) => [t.key, i]));
 export const MAX_ITEMS = 250;

@@ -42,6 +42,12 @@ export function makeTown() {
       deco(rx + 9.5, 0.064, rz + i * 1.6, 3, 0.02, 0.9, '#ffffff', { noShadow: true });
     }
     lamp(rx + 8.5, rz + 8.5); lamp(rx - 8.5, rz - 8.5);
+    // Ampeln an den anderen zwei Ecken (die Lichter schaltet traffic.js)
+    for (const [sx, sz] of [[1, -1], [-1, 1]]) {
+      box(rx + sx * 7.6, 0, rz + sz * 7.6, 0.3, 4.2, 0.3, '#37474f', { shape: 'cyl' });
+      deco(rx + sx * 7.6, 4.2, rz + sz * 7.6, 0.75, 2.2, 0.75, '#263238');
+      deco(rx + sx * 7.6, 6.4, rz + sz * 7.6, 0.95, 0.15, 0.95, '#263238');
+    }
   }
   // Bäume entlang der Strassen
   for (const rr of ROADS) for (let t = -150; t <= 150; t += 20) {
@@ -470,7 +476,7 @@ export function makeTown() {
   // Einkaufsstrasse im Norden
   shopRow(K, W, -250, -252, 50, 's', [
     { name: 'Kino 🎬', wall: '#37474f', signFg: '#d32f2f', roofColor: '#212121', to: 'house2', menu: ['juice', 'donut', 'icecream'], menuTitle: '🍿 Kino-Snacks', keeper: 'Kino-Karl', job: job('🎬', 'Im Kino arbeiten', 'Du zeigst allen ihre Plätze!') },
-    { name: 'Pizzeria 🍕', wall: '#ffccbc', awning: '#e53935', to: 'cafe', menu: ['pizza', 'juice'], keeper: 'Pizzaiolo Paolo', keeperJob: 2, say: ['Pizza Margherita! 🍕', 'Frisch aus dem Ofen! 🔥'], job: job('🍕', 'Pizza backen', 'Du backst eine riesige Pizza!') },
+    { name: 'Pizzeria 🍕', wall: '#ffccbc', awning: '#e53935', to: 'pizzeria', menu: ['pizza', 'juice'], keeper: 'Pizzaiolo Paolo', keeperJob: 2, say: ['Pizza Margherita! 🍕', 'Frisch aus dem Ofen! 🔥', 'Komm rein und back selber Pizza! 👩‍🍳'] },
     { name: 'Spielwaren 🧸', wall: '#fff59d', awning: '#ffb300', to: 'market', menu: ['ball', 'teddy', 'balloon', 'kite', 'frisbee', 'duck'], keeper: 'Toni Teddy', job: job('🧸', 'Im Spielwarenladen arbeiten', 'Du räumst die Spielsachen ein!') },
     { name: 'Blumenladen 🌷', wall: '#f8bbd0', awning: '#ec407a', to: 'house2', menu: ['flower'], keeper: 'Flora', job: job('🌷', 'Blumen giessen', 'Du giesst alle Blumen!', 4, 3) },
     { name: 'Einkaufszentrum 🛍️', bw: 30, bd: 14, h: 9, wall: '#e3f2fd', tex: 'tiles', roofColor: '#1e88e5', to: 'market', menu: ['apple', 'banana', 'strawberry', 'carrot', 'juice'], keeper: 'Kassiererin Kim', job: job('🛍️', 'An der Kasse arbeiten', 'Piep, piep! Du scannst alle Einkäufe!'), wardrobe: '👗 Mode-Abteilung' },
@@ -506,7 +512,7 @@ export function makeTown() {
   // ---------- Innenwelten ----------
   const interiors = {};
   const IZ = -1500;
-  const keys = ['home', 'house2', 'dentist', 'parkour', 'maze', 'cafe', 'boutique', 'salon', 'pets', 'market'];
+  const keys = ['home', 'house2', 'dentist', 'parkour', 'maze', 'cafe', 'boutique', 'salon', 'pets', 'market', 'pizzeria'];
   keys.forEach((k, i) => { interiors[k] = { x: -900 + i * 200, z: IZ }; });
 
 
@@ -586,6 +592,31 @@ export function makeTown() {
     wardrobePart(ox - 14.6, oz + 2, 1.4, 3, '👗 Kleiderschrank');
     box(ox + 14.6, 0, oz + 6, 1, 1.4, 1.6, '#ffffff', { act: 'brush', title: '🪥 Zähne putzen' });
     it('dog', ox + 3, 0.05, oz - 6);
+  }
+
+  // Pizzeria: Holzofen, Pizza-Theke (Minispiel), Koch-Kleider, Tische
+  {
+    const { x: ox, z: oz } = interiors.pizzeria;
+    interiors.pizzeria.spawn = shell(ox, oz, 32, 24, 8, '#d7a86e', 'checker', '#ffe0b2', 'brick', 'Pizzeria 🍕');
+    // Holzofen (Kuppel) mit Glut
+    box(ox - 9, 0, oz - 9.5, 7, 1.6, 4, '#b0614a', { tex: 'brick' });
+    deco(ox - 9, 1.6, oz - 9.5, 6.4, 3.6, 3.8, '#c0714f', { shape: 'hemi', tex: 'brick' });
+    deco(ox - 9, 1.7, oz - 7.55, 2.2, 1.4, 0.1, '#ff6d00', { emissive: '#ff3d00', emissiveIntensity: 0.9 });
+    deco(ox - 9, 4.8, oz - 10.2, 0.9, 3.2, 0.9, '#8d6e63', { tex: 'brick' });
+    sign('🔥 Holzofen', ox - 9, 6.4, oz - 11.9, 4, 0.9, 'z+', '#fff3e0', '#bf360c', false);
+    // Pizza-Theke: hier startet das Spiel
+    box(ox + 2, 0, oz - 8, 9, 1.2, 2.2, '#ffffff', { act: 'pizza', tex: 'tiles' });
+    deco(ox + 2, 1.2, oz - 8, 3, 0.08, 1.6, '#d7a86e', { tex: 'wood' });
+    for (const [dx, c] of [[-3, '#e53935'], [-2, '#fff8e1'], [5.6, '#43a047'], [6.6, '#ffd54f']]) deco(ox + dx + 0.5, 1.2, oz - 8.4, 0.7, 0.45, 0.7, c, { shape: 'cyl' });
+    sign('👩‍🍳 Pizza backen', ox + 2, 3.4, oz - 9.2, 5, 1, 'z+', '#e53935', '#ffffff');
+    staticBots.push({ name: 'Pizzaiolo Paolo', pos: [ox + 9, 0, oz - 9.5], rot: 0, anim: 'idle', job: 2, role: 'shop', say: ['Tippe auf die Theke und back eine Pizza! 🍕', 'Nicht vergessen: zuerst Sauce, dann Käse! 🧀', 'Mamma mia, perfetto! 👌'] });
+    wardrobePart(ox + 14.6, oz - 4, 1.4, 3, '👩‍🍳 Koch-Kleider', 'jobs');
+    // Tische für die Gäste
+    for (const [tx, tz] of [[-8, 2], [0, 4], [8, 2], [-8, 9], [8, 9]]) {
+      table(ox + tx, 0, oz + tz, 2.6, 2.2, '#ffffff', 'checker');
+      chair(ox + tx - 2.1, oz + tz, Math.PI / 2, '#e53935'); chair(ox + tx + 2.1, oz + tz, -Math.PI / 2, '#e53935');
+    }
+    box(ox - 14.4, 0, oz + 6, 1.4, 1.3, 3, '#ffcc80', { act: 'menu', title: '🍕 Pizza essen', menu: ['pizza', 'juice', 'icecream'], tex: 'wood' });
   }
 
   // Zahnarztpraxis
@@ -832,7 +863,7 @@ export function makeTown() {
     ['🌳 Park & See', -120, 42], ['🤸 Trampolinpark', -60, 42], ['🚗 Fahrzeuge', 0, 42], ['🌈 Obby-Turm', 106, 76],
     ['🧗 Kletterhaus', -60, -106], ['🌿 Irrgarten', 0, -96], ['🚒 Feuerwehr', 120, -102], ['🏎️ Kart-Bahn', 120, -38],
     ['🌀 Labyrinth-Haus', -60, 104], ['⏰ Abenteuer-Haus', 0, 104], ['🐄 Bauernhof', 110, 140], ['🏖️ Strand & ✈️ Flughafen', 0, G + 7],
-    ['🛍️ Einkaufsstrasse', 0, -236], ['🏡 Eigene Häuser', 0, -198], ['🎡 Hana-Land', -190, 284], ['🏊 Schwimmbad', -60, 274], ['🐰 Streichelzoo', 70, 274], ['⚽ Sportplatz', 200, 272], ['🔥 Lagerfeuer', 255, 24], ['⛺ Pfadi-Lager', -255, -24],
+    ['🛍️ Einkaufsstrasse', 0, -236], ['🍕 Pizzeria', -200, -238], ['🏡 Eigene Häuser', 0, -198], ['🎡 Hana-Land', -190, 284], ['🏊 Schwimmbad', -60, 274], ['🐰 Streichelzoo', 70, 274], ['⚽ Sportplatz', 200, 272], ['🔥 Lagerfeuer', 255, 24], ['⛺ Pfadi-Lager', -255, -24],
   ];
 
   // Flughafen am Strand

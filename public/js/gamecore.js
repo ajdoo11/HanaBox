@@ -1,5 +1,5 @@
 // Spiel-Server-Kern: Räume, Bots und Spielregeln. Läuft im Node-Server und – ohne Server (z.B. GitHub Pages) – direkt im Browser.
-import { GAMES, MAX_PLAYERS, BLOCK_TYPES, BUILD, ITEM_TYPES, ITEM_INDEX, MAX_ITEMS, VEHICLES, sanitizeAvatar, sanitizeName, validChat, ANIMS, vehDecode, HOUSE_LOTS, HOUSE_STYLES, HOUSE_WALLS, HOUSE_ROOFS } from './shared.js';
+import { GAMES, MAX_PLAYERS, BLOCK_TYPES, BUILD, ITEM_TYPES, ITEM_INDEX, MAX_ITEMS, VEHICLES, sanitizeAvatar, sanitizeName, validChat, ANIMS, vehDecode, HOUSE_LOTS, HOUSE_STYLES, HOUSE_WALLS, HOUSE_ROOFS, HOUSE_FLOORS, FURNITURE, MAX_FURN } from './shared.js';
 import { WORLDS } from './worlds.js';
 import { townCellAllowed, LAND_DEFS } from './lands.js';
 import { Bot, randomAvatar, worldPhysics } from './bots.js';
@@ -523,12 +523,36 @@ export function createGameCore({ storage, log = () => {}, authenticate = null })
         const cur = room.houses.get(m.lot);
         if (cur && cur.owner !== p.name) return send(p.ws, { t: 'notice', text: '🏡 Dieses Grundstück gehört schon jemandem.' });
         client.lastHouse = now;
+        // Einrichtung zieht mit um bzw. bleibt beim Umbauen erhalten
+        const old = [...room.houses.values()].find(h => h.owner === p.name);
         for (const [lot, h] of room.houses) if (h.owner === p.name && lot !== m.lot) { room.houses.delete(lot); room.broadcast({ t: 'house', lot, h: null }); }
         const h = { owner: p.name, style: m.style, wall: m.wall, roof: m.roof };
+        for (const k of ['furn', 'inWall', 'floor']) if (old?.[k] !== undefined) h[k] = old[k];
         room.houses.set(m.lot, h);
         room.broadcast({ t: 'house', lot: m.lot, h });
         room.saveSoon();
         log(`${p.name} baut ein Haus auf Grundstück ${m.lot + 1}`);
+        break;
+      }
+      case 'furnish': { // eigenes Haus einrichten: ganze Möbelliste, Wand- und Bodenfarbe
+        if (room.game !== 'town' || !Array.isArray(m.furn) || m.furn.length > MAX_FURN) return;
+        if (now - (client.lastFurn || 0) < 150) return;
+        const mine = [...room.houses].find(([, h]) => h.owner === p.name);
+        if (!mine) return;
+        const furn = [];
+        for (const f of m.furn) {
+          if (!Array.isArray(f) || f.length !== 4) return;
+          const [k, x, z, r] = f;
+          if (!Number.isInteger(k) || k < 0 || k >= FURNITURE.length || !Number.isInteger(r) || r < 0 || r > 3) return;
+          furn.push([k, Math.round(num(x, -20, 20) * 10) / 10, Math.round(num(z, -16, 16) * 10) / 10, r]);
+        }
+        client.lastFurn = now;
+        const h = { ...mine[1], furn };
+        if (Number.isInteger(m.inWall) && m.inWall >= 0 && m.inWall < HOUSE_WALLS.length) h.inWall = m.inWall;
+        if (Number.isInteger(m.floor) && m.floor >= 0 && m.floor < HOUSE_FLOORS.length) h.floor = m.floor;
+        room.houses.set(mine[0], h);
+        room.broadcast({ t: 'house', lot: mine[0], h });
+        room.saveSoon();
         break;
       }
       case 'grab': {

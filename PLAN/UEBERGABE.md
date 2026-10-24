@@ -49,6 +49,16 @@ Diese Datei ist für die nächste Sitzung. Lies sie zuerst, dann `PLAN/Naechste-
 - Spiel (`game.js`): `setHouse`, `myLot`, `goHome`, `buildHouse`. Grundstücke sind Chunks (`addChunk`/`removeChunk`). Wer im Innenraum ist, wenn das Haus umgebaut wird, wird mitversetzt.
 - Rucksack (`main.js`): Abschnitt «🏡 Häuser», `houseDialog()` mit Farben und Grundstück-Raster. Kauf des Haustyps wie bei den Fahrzeugen nur im Gerät (Server prüft Sterne nicht).
 
+## Neu am 24.10. (Nachmittag)
+- Leistung (`game.js` `adaptQuality`, `updateLOD`, `geo.js` `buildStatic`): Schatten immer an; Stufen 0–3 senken Pixel-Verhältnis (2/1.5/1.25/1), Kantenglättung und Sichtweite (420/300/230/170). Statische Welt mit Eckenfarben (`vertexColored`) je Oberfläche zusammengefasst; `cullList` blendet Teile im Nebel aus. Erster Zeitschritt nie negativ (Kamera flog sonst weg).
+- Bots (`gamecore.js`): `BOT_TARGET_DEFAULT.town = 80` pro Gebiet, Start an zufälligen Treffpunkten (`townSpawn`). `BOT_AWAKE` 230: weiter weg bewegen sie sich nicht. `flushStates` schickt jedem Spieler nur Bots innerhalb `BOT_VIEW` 170. Nachricht `bots` wird ignoriert.
+- HUD: Profil-Karte `#meCard` (Bild aus der Avatar-Vorschau, Name aus `welcome.name`, Sterne über `.starCount`). `#btnMap`, `#btnPhoto`, `#scoreboard` versteckt.
+- Freunde: Handy-Reiter listet alle Online-Spieler; `game.travelToPlayer(id)`. Namensschilder für alle echten Spieler.
+- Einrichten: Katalog `FURNITURE`/`HOUSE_FLOORS` in `shared.js`, Bau in `houses.js` (`placeFurn`, `defaultFurn`), Nachricht `furnish` {furn: [[Möbel, x, z, Drehung]], inWall, floor}. Panel in `game.js` (`openFurnish`, `furnishDo`).
+- Pizzeria: `pizza.js` (Minispiel), Innenraum `pizzeria` in `town.js`, Aktion `pizza`.
+- Verkehr: `traffic.js` – Ampel-Lichter als ein InstancedMesh (Masten in `town.js`), Boote (4 pro Insel) aus der Server-Uhrzeit.
+- Fahrzeuge: `vehicles.js` hebt Landfahrzeuge um `LIFT` 0.15 an.
+
 ## 4. Offen (Reihenfolge, siehe PLAN/Naechste-Schritte.md)
 1. ~~Rucksack-Shop~~ erledigt (noch auf Render deployen).
 2. ~~Häuser kaufen~~ erledigt (siehe «Eigene Häuser»). Noch auf Render deployen.

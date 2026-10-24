@@ -16,6 +16,17 @@ Stand: 2026-10-24. Diese Datei ist der Fahrplan. Wenn die Sitzung ein Limit erre
 - [ ] 5. Autos und Tiere besser darstellen (Modelle, Farben, Animationen).
 - [x] 6. Gesamtbild (Teil 1+2, 24.10.): Cel-Shading, Umrisslinien, kräftige Farben, runde Figuren/Fahrzeuge, Comic-Oberfläche. Layout auf Handy und PC geprüft. Teil 3: Gebäude (weiche Kanten, Rundbogentüren, Fensterläden) und Bäume (Wolkenkronen, Tannen, Palmen) erledigt. Teil 4: Tiere mit grossem Kopf, Kulleraugen und Bäckchen erledigt. Offen: echter iPad-Leistungstest.
 - [ ] 7. Hochladen: git push, Render "Manual Deploy" → "Deploy latest commit".
+- [x] 8. Wunschliste vom 24.10. (Nachmittag), alles umgesetzt und im Browser getestet:
+  - Schatten kommen/gehen nicht mehr (wurden je nach Bildrate an/aus geschaltet), Schattenbereich grösser.
+  - Tiere kleiner (Haustiere 0.95, frei laufende 1.1 statt 2.5). Fahrzeuge 0.15 angehoben (Räder steckten in Strasse/Gehweg).
+  - Flüssiger: Welt nach Oberfläche statt Farbe zusammengefasst (etwa halb so viele Zeichenschritte), Teile im Nebel ausgeblendet, langsame Geräte senken Auflösung und Sichtweite schrittweise. Von 80 Bots pro Stadt werden nur die 30 nächsten gezeichnet.
+  - Oben links nur noch ☰, 📱 und Profil-Karte (Figur, Name, Sterne). Karte, Selfie und Spielerliste sind im Handy.
+  - Handy → Freunde: alle Online-Spieler automatisch, «📍 Hin» reist zu ihnen, ⭐ markiert Lieblingsfreunde.
+  - 80 Bots in jeder Stadt (fest, Menü-Regler entfernt). Weit entfernte Bots warten, der Server schickt nur nahe Bots.
+  - Eigenes Haus einrichten: Knopf «🛋️ Einrichten» im eigenen Haus, 21 Möbel, Drehen, Wegräumen, Wand- und Bodenfarbe (höchstens 40 Möbel).
+  - Pizzeria (Einkaufsstrasse, auf der Karte): eigener Innenraum mit Holzofen, Pizza-Minispiel (Bestellung, Teig, Sauce, Käse, Beläge, Ofen, Servieren; 4 ⭐ pro Pizza, 3 Pizzas pro Schicht).
+  - Ampeln an allen 36 Kreuzungen (für alle gleich geschaltet), Boote mit Fahrer fahren um alle Inseln.
+  - Offen: echter Test auf iPad/Handy (Bildrate), Bots halten nicht an Ampeln, Boote fahren durch Spieler-Boote hindurch.
 
 ## Reihenfolge (Wunsch vom 24.10.)
 - Zuerst die neue Grafik fertig machen, danach Häuser kaufen und die übrigen Punkte.
